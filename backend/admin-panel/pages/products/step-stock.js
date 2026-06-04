@@ -17,15 +17,19 @@ export function renderStepStock(ctx) {
   const { form, setField, isEdit } = ctx;
   const cfg = STOCK_INPUT_CONFIG[form.stock_type] || STOCK_INPUT_CONFIG.manual;
 
-  // Mode edit: jangan tampilkan input stok (kelola via halaman stok tersendiri nanti)
+  // Mode edit: arahkan ke modal Kelola Stok tersendiri
   if (isEdit) {
     return el('div', { class: 'wz-step-pane' },
       el('h3', {}, 'Stok'),
       el('p', { class: 'hint' },
-        'Pada mode edit, manajemen stok dilakukan di halaman terpisah.'),
+        'Pada mode edit, manajemen stok dilakukan di modal terpisah.'),
       el('div', {
         style: 'padding:14px 16px;background:var(--color-surface-soft);border:1px dashed var(--color-border);border-radius:var(--mkd-radius-lg);color:var(--color-text-muted);font-size:var(--fs-sm)'
-      }, 'Selesaikan wizard untuk menyimpan perubahan produk. Untuk mengisi stok, gunakan tombol "Stok" pada tabel produk (segera tersedia).')
+      },
+        'Selesaikan wizard untuk menyimpan perubahan produk. Untuk menambah atau menghapus stok, klik tombol ',
+        el('strong', { style: 'color:var(--color-text-primary)' }, '"Stok"'),
+        ' di baris produk pada tabel.'
+      )
     );
   }
 

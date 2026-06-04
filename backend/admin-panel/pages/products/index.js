@@ -8,6 +8,7 @@ import { api } from '../../api.js';
 import { shell } from '../../shell.js';
 import { PRODUCT_TYPES } from './constants.js';
 import { openProductWizard } from './wizard.js';
+import { openStockManager } from './stock-manager.js';
 
 function typeLabel(v) {
   return (PRODUCT_TYPES.find(t => t.value === v) || {}).label || v;
@@ -15,6 +16,10 @@ function typeLabel(v) {
 
 function rowActions(p, ctx) {
   return el('div', { class: 'row-actions' },
+    el('button', {
+      class: 'btn ghost small',
+      onclick: () => openStockManager({ product: p, onDone: ctx.reload })
+    }, 'Stok'),
     el('button', {
       class: 'btn ghost small',
       onclick: () => openProductWizard({
