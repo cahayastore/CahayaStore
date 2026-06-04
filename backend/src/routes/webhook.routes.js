@@ -7,9 +7,9 @@ const { safeEqual } = require('../crypto');
 
 const router = express.Router();
 
-/**
- * Mount this router with raw body parser BEFORE express.json:
- *   app.use('/api/webhooks', express.raw({ type: '*/*', limit: '1mb' }), webhookRouter)
+/*
+ * Mount this router with raw body parser BEFORE express.json.
+ * Example: app.use('/api/webhooks', express.raw({ type: 'application/json', limit: '1mb' }), webhookRouter)
  */
 
 router.post('/myqris', async (req, res) => {
