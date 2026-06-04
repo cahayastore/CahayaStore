@@ -58,7 +58,9 @@ async function loadProducts() {
     const res = await fetch('https://api.cahayastore.me/api/products', { cache: 'no-store' });
     const json = await res.json();
     const data = Array.isArray(json?.data) ? json.data : json;
-    return data?.length ? data.slice(0, 6).map(normalizeProduct) : fallbackProducts;
+    const products = data?.slice(0, 6).map(normalizeProduct) || [];
+    const hasCafeAccounts = products.some((item) => /(kopi|tomoro|kfc|janji|chagee|chatime)/i.test(item.name));
+    return products.length >= 6 && hasCafeAccounts ? products : fallbackProducts;
   } catch {
     return fallbackProducts;
   }
