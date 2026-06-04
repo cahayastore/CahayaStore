@@ -47,4 +47,40 @@ function safeEqual(a, b) {
   } catch { return false; }
 }
 
-module.exports = { encryptJson, decryptJson, hmacSha256, safeEqual };
+/* Encrypt single string content (for product_stocks.encrypted_content).
+ * Returns a compact "v1:iv:tag:ct" base64 string yang aman disimpan
+ * di kolom TEXT. Decrypt cek prefix dan reverse-balik. */
+function encryptString(plaintext) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', getKey(), iv);
+  const ct = Buffer.concat([
+    cipher.update(Buffer.from(String(plaintext), 'utf8')),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
+  return [
+    'v1',
+    iv.toString('base64'),
+    tag.toString('base64'),
+    ct.toString('base64'),
+  ].join(':');
+}
+
+function decryptString(payload) {
+  if (!payload || typeof payload !== 'string') throw new Error('Bad encrypted string');
+  const parts = payload.split(':');
+  if (parts.length !== 4 || parts[0] !== 'v1') throw new Error('Bad version');
+  const iv = Buffer.from(parts[1], 'base64');
+  const tag = Buffer.from(parts[2], 'base64');
+  const ct = Buffer.from(parts[3], 'base64');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', getKey(), iv);
+  decipher.setAuthTag(tag);
+  const plain = Buffer.concat([decipher.update(ct), decipher.final()]);
+  return plain.toString('utf8');
+}
+
+module.exports = {
+  encryptJson, decryptJson,
+  encryptString, decryptString,
+  hmacSha256, safeEqual,
+};

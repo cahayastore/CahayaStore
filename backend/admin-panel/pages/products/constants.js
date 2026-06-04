@@ -7,8 +7,48 @@ export const STEPS = [
   { num: 1, key: 'type',    label: 'Tipe' },
   { num: 2, key: 'info',    label: 'Info' },
   { num: 3, key: 'pricing', label: 'Harga' },
-  { num: 4, key: 'review',  label: 'Review' },
+  { num: 4, key: 'stock',   label: 'Stok' },
+  { num: 5, key: 'review',  label: 'Review' },
 ];
+
+/* Mapping stock_type (wizard) → content_type (DB product_stocks). */
+export const STOCK_CONTENT_MAP = {
+  code:    'code',
+  account: 'credential',
+  file:    'file',
+  manual:  null,     // skip stok pas create — admin tambah belakangan
+  pre_order: null,   // tidak butuh stok
+};
+
+/* Konfigurasi UI per stock_type pada Step Stok */
+export const STOCK_INPUT_CONFIG = {
+  code: {
+    title: 'Daftar Kode / Voucher',
+    hint:  'Satu kode per baris. Setiap baris = satu stok.',
+    placeholder: 'ABCD-1234-EFGH\nXYZW-5678-IJKL',
+  },
+  account: {
+    title: 'Daftar Akun (email:password)',
+    hint:  'Satu akun per baris. Format bebas — disarankan email:password atau email:password:2fa.',
+    placeholder: 'user1@example.com:passw0rd\nuser2@example.com:passw0rd:2faSecret',
+  },
+  file: {
+    title: 'File Digital',
+    hint:  'Upload file belum tersedia di wizard. Untuk sementara, simpan produk dulu lalu upload via panel stok manual.',
+    placeholder: '',
+    disabled: true,
+  },
+  manual: {
+    title: 'Stok Manual',
+    hint:  'Produk akan dibuat tanpa stok awal. Anda bisa menambahkan stok kapan saja dari halaman produk.',
+    skipInput: true,
+  },
+  pre_order: {
+    title: 'Pre-Order',
+    hint:  'Tidak perlu stok. Setiap pesanan akan diproses manual oleh admin.',
+    skipInput: true,
+  },
+};
 
 /* Tipe produk inti (sesuai kolom products.product_type) */
 export const PRODUCT_TYPES = [
@@ -52,6 +92,8 @@ export function createDefaultForm() {
     category_id: '',
     price: 0,
     is_active: true,
+    // Stock items (raw textarea — di-parse pada submit)
+    stock_items_raw: '',
   };
 }
 
@@ -66,7 +108,16 @@ export function createFormFromProduct(p) {
     category_id: p.category_id || '',
     price: Number(p.price) || 0,
     is_active: p.is_active !== false,
+    stock_items_raw: '', // edit mode tidak otomatis tambah stok lewat wizard
   };
+}
+
+/* Parse raw textarea jadi array string non-kosong */
+export function parseStockItems(raw) {
+  return String(raw || '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 /* Build payload yang dikirim ke API */

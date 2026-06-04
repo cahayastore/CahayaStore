@@ -1,6 +1,7 @@
 import { el, alertBox } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
+import { buildChangePasswordCard } from './settings/change-password.js';
 
 const SECTIONS = [
   {
@@ -93,8 +94,16 @@ function buildSection(section) {
 
 export async function pageSettings() {
   const wrap = el('div', {},
-    el('div', { class: 'page-head' }, el('h1', {}, 'Pengaturan'))
+    el('div', { class: 'page-head' },
+      el('div', {},
+        el('h1', {}, 'Pengaturan'),
+        el('div', { class: 'sub' }, 'Konfigurasi toko, payment, bot, dan keamanan akun.')
+      )
+    )
   );
+  // Security card di atas (paling penting)
+  wrap.appendChild(buildChangePasswordCard());
+  // Konfigurasi lain
   for (const s of SECTIONS) wrap.appendChild(buildSection(s));
   return shell(wrap);
 }

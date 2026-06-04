@@ -15,19 +15,23 @@ import { buildProgress } from './progress.js';
 import { renderStepType,    validateStepType }    from './step-type.js';
 import { renderStepInfo,    validateStepInfo }    from './step-info.js';
 import { renderStepPricing, validateStepPricing } from './step-pricing.js';
+import { renderStepStock,   validateStepStock }   from './step-stock.js';
 import { renderStepReview,  validateStepReview }  from './step-review.js';
+import { STOCK_CONTENT_MAP, parseStockItems } from './constants.js';
 
 const STEP_RENDERERS = {
   1: renderStepType,
   2: renderStepInfo,
   3: renderStepPricing,
-  4: renderStepReview,
+  4: renderStepStock,
+  5: renderStepReview,
 };
 const STEP_VALIDATORS = {
   1: validateStepType,
   2: validateStepInfo,
   3: validateStepPricing,
-  4: validateStepReview,
+  4: validateStepStock,
+  5: validateStepReview,
 };
 
 function closeWizard() {
@@ -127,17 +131,40 @@ export function openProductWizard({ product = null, categories = [], onDone }) {
     render();
     try {
       const body = buildSubmission(state.form);
+      let createdId = product?.id || null;
       if (isEdit) {
         await api('/api/admin/products/' + product.id, {
           method: 'PUT',
           body: JSON.stringify(body),
         });
       } else {
-        await api('/api/admin/products', {
+        const created = await api('/api/admin/products', {
           method: 'POST',
           body: JSON.stringify(body),
         });
+        createdId = created?.data?.id || null;
       }
+
+      // Bulk-insert stok (hanya create mode, dan kalau ada items)
+      if (!isEdit && createdId) {
+        const contentType = STOCK_CONTENT_MAP[state.form.stock_type];
+        const items = parseStockItems(state.form.stock_items_raw);
+        if (contentType && items.length > 0) {
+          try {
+            await api(`/api/admin/products/${createdId}/stocks`, {
+              method: 'POST',
+              body: JSON.stringify({ content_type: contentType, items }),
+            });
+          } catch (stockErr) {
+            // Produk sudah dibuat, tapi stok gagal — beri warning, jangan rollback
+            state.submitting = false;
+            state.error = `Produk dibuat, tapi gagal menambah stok: ${stockErr.message}`;
+            render();
+            return;
+          }
+        }
+      }
+
       closeWizard();
       if (typeof onDone === 'function') onDone();
     } catch (e) {
