@@ -51,7 +51,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', require('./src/routes/auth.routes'));
 app.use('/api', require('./src/routes/public.routes'));
 app.use('/api', require('./src/routes/checkout.routes'));
-app.use('/api/admin', require('./src/routes/admin.routes'));
+app.use('/api/admin', require('./src/routes/admin'));
 
 // Serve mini admin SPA
 const ADMIN_DIR = path.resolve(__dirname, 'admin-panel');
