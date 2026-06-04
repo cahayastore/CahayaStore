@@ -1,169 +1,99 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cahaya Store — Akan Segera Hadir</title>
-  <meta name="description" content="Cahaya Store: platform belanja produk digital, akun, voucher, QRIS, dan Telegram commerce.">
-  <meta name="theme-color" content="#2563EB">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
-  <style>
-    :root{
-      --color-bg:#FAFAFC;--color-surface:#FFFFFF;--color-surface-soft:#F8FAFC;
-      --color-border:#E2E8F0;--color-text:#0F172A;--color-text-secondary:#334155;--color-text-muted:#64748B;
-      --color-primary:#2563EB;--color-primary-hover:#1D4ED8;--color-primary-soft:#EEF2FF;
-      --color-info:#0EA5E9;--color-success:#10B981;
-      --radius-md:12px;--radius-lg:14px;--radius-xl:16px;--radius-2xl:24px;--radius-full:999px;
-      --shadow-soft:0 1px 3px rgba(15,23,42,.05);
-      --shadow-elev:0 18px 48px rgba(15,23,42,.10);
-      --font:"Plus Jakarta Sans",system-ui,-apple-system,sans-serif;
-      --font-h:"Sora",var(--font);
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;min-height:100vh}
-    body{
-      font-family:var(--font); color:var(--color-text);
-      background:
-        radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 28%),
-        radial-gradient(circle at 86% 12%, color-mix(in srgb, var(--color-info) 9%, transparent), transparent 24%),
-        linear-gradient(180deg, var(--color-surface-soft) 0%, var(--color-bg) 58%, var(--color-surface-soft) 100%);
-      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-      overflow-x:hidden;
-    }
-    .wrap{ max-width:1120px; margin:0 auto; padding:32px 24px; }
-    .nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; }
-    .brand{ display:flex; align-items:center; gap:12px; font-family:var(--font-h); font-weight:800; font-size:18px; letter-spacing:-.02em; }
-    .brand .logo{
-      width:42px; height:42px; border-radius:var(--radius-md);
-      background:linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
-      display:grid; place-items:center; font-size:20px; color:#fff;
-      box-shadow:0 8px 22px rgba(37,99,235,.30);
-    }
-    .badge{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 14px; border-radius:var(--radius-full);
-      background:var(--color-primary-soft);
-      color:var(--color-primary); font-weight:700; font-size:13px;
-      border:1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
-    }
-    .badge .dot{ width:8px; height:8px; border-radius:50%; background:var(--color-success); box-shadow:0 0 0 4px color-mix(in srgb, var(--color-success) 18%, transparent); }
-    .hero{
-      position:relative; overflow:hidden;
-      background:var(--color-surface);
-      border:1px solid var(--color-border);
-      border-radius:var(--radius-2xl);
-      padding:clamp(28px,5vw,56px);
-      box-shadow:var(--shadow-elev);
-    }
-    .hero::before{
-      content:""; position:absolute; inset:auto -10% -30% auto;
-      width:520px; height:520px; border-radius:50%;
-      background:color-mix(in srgb, var(--color-primary) 8%, transparent);
-      filter:blur(8px); pointer-events:none;
-    }
-    .hero-content{ position:relative; z-index:1; max-width:780px; }
-    .pill{
-      display:inline-flex; padding:9px 14px; border-radius:var(--radius-full);
-      background:var(--color-primary-soft);
-      color:var(--color-primary-hover); font-weight:800; font-size:12px;
-      text-transform:uppercase; letter-spacing:.08em;
-      border:1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
-    }
-    h1{
-      font-family:var(--font-h); margin:18px 0 14px;
-      font-size:clamp(32px, 6vw, 56px); font-weight:800;
-      line-height:1.08; letter-spacing:-.04em; color:var(--color-text);
-    }
-    .lead{
-      font-size:clamp(15px, 1.8vw, 18px); line-height:1.7;
-      color:var(--color-text-secondary); margin:0 0 26px; max-width:680px;
-    }
-    .cta{ display:flex; gap:12px; flex-wrap:wrap; }
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      min-height:46px; padding:0 22px;
-      border-radius:var(--radius-md); border:1px solid transparent;
-      font-weight:700; font-size:15px; text-decoration:none;
-      transition:all .15s ease;
-    }
-    .btn.primary{
-      background:linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
-      color:#fff; box-shadow:0 8px 22px rgba(37,99,235,.30);
-    }
-    .btn.primary:hover{ box-shadow:0 10px 28px rgba(37,99,235,.40); transform:translateY(-1px); }
-    .btn.secondary{
-      background:var(--color-surface); border-color:var(--color-border);
-      color:var(--color-text);
-    }
-    .btn.secondary:hover{ border-color:var(--color-primary); color:var(--color-primary); }
-    .feature-grid{
-      display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:14px; margin-top:32px;
-    }
-    .feature{
-      background:var(--color-surface-soft);
-      border:1px solid var(--color-border);
-      border-radius:var(--radius-lg);
-      padding:18px;
-    }
-    .feature .ic{
-      width:36px; height:36px; border-radius:var(--radius-md);
-      background:var(--color-primary-soft);
-      color:var(--color-primary);
-      display:grid; place-items:center;
-      font-size:18px; margin-bottom:10px;
-    }
-    .feature strong{ display:block; margin-bottom:6px; font-size:15px; color:var(--color-text); }
-    .feature span{ color:var(--color-text-muted); font-size:13.5px; line-height:1.55; }
-    .foot{
-      margin-top:24px; color:var(--color-text-muted); font-size:13px; text-align:center;
-    }
-    @media (max-width:760px){
-      .nav{ flex-direction:column; align-items:flex-start; gap:14px; }
-      .feature-grid{ grid-template-columns:1fr; }
-      .hero{ border-radius:var(--radius-xl); }
-    }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cahaya Store — Akun Premium Terpercaya</title>
+  <meta name="description" content="Cahaya Store menyediakan akun premium aktif, bergaransi, dan proses cepat." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Sora:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles/tokens.css" />
+  <link rel="stylesheet" href="/styles/layout.css" />
+  <link rel="stylesheet" href="/styles/home.css" />
 </head>
 <body>
-  <main class="wrap">
-    <nav class="nav">
-      <div class="brand"><span class="logo">⚡</span><span>Cahaya Store</span></div>
-      <span class="badge"><span class="dot"></span>cahayastore.me aktif</span>
-    </nav>
+  <div class="top-strip">
+    <div class="container">
+      <div class="strip-left">
+        <span class="strip-item">⚡ Proses Cepat</span><span class="strip-item">🛡️ Aman 100%</span><span class="strip-item">💬 24/7 Support</span>
+      </div>
+      <div class="strip-right">
+        <a href="#contact">💬 Hubungi Kami</a><a href="https://pay.cahayastore.me">◎ Cek Pesanan</a><a href="https://admin.cahayastore.me/admin/">♙ Login / Daftar</a>
+      </div>
+    </div>
+  </div>
 
-    <section class="hero">
-      <div class="hero-content">
-        <span class="pill">Akan Segera Hadir</span>
-        <h1>Platform belanja digital Cahaya Store sedang disiapkan.</h1>
-        <p class="lead">Kami sedang membangun toko digital untuk file digital, akun, voucher, QRIS payment, partner internal, dan pengalaman belanja langsung dari Telegram.</p>
-        <div class="cta">
-          <a class="btn primary" href="https://t.me/" rel="noopener">Telegram segera hadir</a>
-          <a class="btn secondary" href="https://api.cahayastore.me/health">Cek status API</a>
+  <header class="site-header">
+    <div class="container">
+      <a class="logo" href="/" aria-label="Cahaya Store">
+        <span class="logo-mark">C✦</span><span class="logo-text"><strong>CAHAYA</strong><span>STORE✦</span></span>
+      </a>
+      <nav class="nav" aria-label="Navigasi utama">
+        <a class="active" href="#home">Beranda</a><a href="#products">Akun Kopi</a><a href="#products">Akun Makanan</a><a href="#how">Cara Order</a><a href="#testimonials">Testimoni</a>
+      </nav>
+      <div class="actions"><button class="icon-pill" aria-label="Cari">⌕</button><a class="icon-pill cart" href="https://pay.cahayastore.me" aria-label="Keranjang">🛒<span class="badge-count">0</span></a></div>
+    </div>
+  </header>
+
+  <main id="home">
+    <section class="hero container">
+      <div class="hero-card panel">
+        <div class="hero-copy">
+          <div class="eyebrow">Selamat datang di</div>
+          <h1>Cahaya <span class="gradient-text">Store</span></h1>
+          <p>Pusat jual beli akun premium terpercaya. Akun aktif, bergaransi, dan harga terbaik!</p>
+          <div class="benefits-row">
+            <div class="benefit-chip">⚙️ <span><b>Proses Instan</b><small>Langsung dikirim</small></span></div>
+            <div class="benefit-chip">🛡️ <span><b>Garansi Aman</b><small>Penggantian jika bermasalah</small></span></div>
+            <div class="benefit-chip">🎧 <span><b>Support 24/7</b><small>Admin siap membantu</small></span></div>
+          </div>
+          <a class="btn btn-primary" href="#products">Lihat Semua Produk ›</a>
         </div>
-        <div class="feature-grid">
-          <div class="feature">
-            <div class="ic">📦</div>
-            <strong>Produk Digital</strong>
-            <span>File digital, akun, voucher, dan akses instan setelah pembayaran.</span>
-          </div>
-          <div class="feature">
-            <div class="ic">⚡</div>
-            <strong>QRIS Payment</strong>
-            <span>Pembayaran terpusat dan siap diintegrasikan dengan MyQRIS.</span>
-          </div>
-          <div class="feature">
-            <div class="ic">💬</div>
-            <strong>Telegram Commerce</strong>
-            <span>Bot khusus untuk jualan, notifikasi, admin panel, dan order flow.</span>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="stage">
+            <div class="phone"><div><div class="phone-mark">C</div><span>Cahaya Store</span><br><small>Akun Premium<br>Harga Terbaik</small><div class="rating">★★★★★</div></div></div>
+            <div class="float-card left-1 logo-kopi">kopi kenangan ♥</div><div class="float-card left-2 logo-kfc">KFC</div><div class="float-card left-3 logo-chagee">CHAGEE</div>
+            <div class="float-card right-1 logo-tomoro">TOMORO COFFEE</div><div class="float-card right-2 logo-janji">Janji Jiwa</div><div class="float-card right-3 logo-chatime">Chatime</div>
           </div>
         </div>
       </div>
     </section>
 
-    <p class="foot">© Cahaya Store · Powered by Marketku Design System.</p>
+    <section class="category-strip panel container" id="categories"><h2 class="section-title">Kategori Akun</h2><div class="category-grid" data-categories></div></section>
+
+    <section class="products-section panel container" id="products">
+      <div class="section-head"><h2>Akun Terlaris</h2><a href="#products">Lihat Semua ›</a></div>
+      <div class="product-grid" data-products></div>
+    </section>
+
+    <section class="why panel container" id="how">
+      <h2 class="section-title">Kenapa pilih Cahaya Store?</h2>
+      <div class="why-grid">
+        <div class="why-item"><span class="why-icon">✦</span><div><b>Akun 100% Aktif</b><p>Akun real dan siap pakai.</p></div></div>
+        <div class="why-item"><span class="why-icon">⚡</span><div><b>Proses Cepat</b><p>Pengiriman instan tanpa menunggu lama.</p></div></div>
+        <div class="why-item"><span class="why-icon">☆</span><div><b>Harga Terbaik</b><p>Harga bersaing dan terjangkau.</p></div></div>
+        <div class="why-item"><span class="why-icon">☏</span><div><b>Support 24/7</b><p>Admin siap membantu kapan saja.</p></div></div>
+        <div class="why-item"><span class="why-icon">🛡</span><div><b>Garansi Penggantian</b><p>Akun bermasalah? Kami ganti baru.</p></div></div>
+      </div>
+    </section>
+
+    <section class="testimonials panel container" id="testimonials">
+      <div class="section-head"><h2>Apa kata mereka?</h2><a href="#testimonials">Lihat Semua ›</a></div>
+      <div class="testimonial-grid">
+        <article class="testimonial-card"><div class="person"><span class="avatar"></span><b>Rizky Pratama</b></div><div class="rating">★★★★★</div><p>Akun Kopi Kenangan aman & cepat. Recommended!</p></article>
+        <article class="testimonial-card"><div class="person"><span class="avatar"></span><b>Dewi Lestari</b></div><div class="rating">★★★★★</div><p>Tomoro Coffee langsung aktif, terima kasih Cahaya Store!</p></article>
+        <article class="testimonial-card"><div class="person"><span class="avatar"></span><b>Fahmi Alfarizi</b></div><div class="rating">★★★★★</div><p>Janji Jiwa aman, harga murah, pelayanan cepat!</p></article>
+        <article class="testimonial-card"><div class="person"><span class="avatar"></span><b>Siti Nurhaliza</b></div><div class="rating">★★★★★</div><p>Chatime & Chagee semua aktif, trusted seller!</p></article>
+      </div>
+    </section>
+
+    <section class="newsletter panel container"><div class="gift">🎁</div><div><h3>Dapatkan info promo & produk terbaru!</h3><p>Jangan sampai ketinggalan promo menarik dari Cahaya Store.</p></div><form><input type="email" placeholder="Masukkan email kamu" /><button class="btn btn-primary">Langganan</button></form></section>
   </main>
+
+  <footer class="footer" id="contact"><div class="container footer-grid"><div><a class="logo" href="/"><span class="logo-text"><strong>Cahaya</strong><span>STORE✦</span></span></a><p>Cahaya Store adalah tempat terpercaya untuk membeli akun premium favoritmu dengan harga terbaik.</p></div><div><h4>Informasi</h4><nav class="footer-links"><a>Tentang Kami</a><a>Cara Order</a><a>Pembayaran</a><a>Garansi</a><a>FAQ</a></nav></div><div><h4>Kategori</h4><nav class="footer-links"><a>Kopi Kenangan</a><a>Tomoro Coffee</a><a>KFC</a><a>Janji Jiwa</a><a>Chagee</a><a>Chatime</a></nav></div><div><h4>Kontak Kami</h4><p>WhatsApp: 0882-1234-5678<br>Email: halo@cahayastore.me<br>Jam Operasional: 24/7<br>Indonesia</p></div></div><div class="container footer-bottom"><span>© 2026 Cahaya Store. All rights reserved.</span><span class="payments">Pembayaran Aman · DANA · OVO · GOPAY · QRIS · BCA · BNI</span></div></footer>
+
+  <nav class="mobile-nav" aria-label="Navigasi mobile"><a class="active" href="#home"><strong>⌂</strong>Beranda</a><a href="#categories"><strong>▦</strong>Kategori</a><a href="#products"><strong>▣</strong>Order</a><a href="#how"><strong>🛡</strong>Garansi</a><a href="https://admin.cahayastore.me/admin/"><strong>♙</strong>Akun</a></nav>
+  <script type="module" src="/scripts/catalog.js"></script>
 </body>
 </html>
