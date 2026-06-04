@@ -1,0 +1,293 @@
+/* ════════════════════════════════════════════════════════════════════
+   Cahaya Store Admin — Product Wizard
+   Style mirrors dashboard.marketku.id AddProductWizard
+   Uses --mkd-* and --ds-color-* tokens defined in tokens.css
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Wizard backdrop / shell ─────────────────────────── */
+.wz-bg {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+  display: grid; place-items: center;
+  padding: 16px;
+  animation: fadeIn .15s ease-out;
+}
+.wz-modal {
+  width: min(880px, 100%);
+  max-height: 94vh;
+  display: flex; flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--mkd-radius-xl);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+}
+
+/* ── Wizard header ──────────────────────────────────── */
+.wz-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--color-primary) 6%, transparent) 0%,
+    transparent 100%);
+}
+.wz-head .title {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--font-h);
+  font-weight: 800; letter-spacing: -0.02em;
+  font-size: 18px;
+  color: var(--color-text-primary);
+}
+.wz-head .title .icon {
+  width: 36px; height: 36px;
+  border-radius: var(--mkd-radius-md);
+  background: var(--ds-gradient-brand);
+  color: #fff;
+  display: grid; place-items: center;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.28);
+  font-size: 18px;
+}
+.wz-head .title .sub {
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0;
+  margin-top: 2px;
+}
+.wz-head .close {
+  width: 32px; height: 32px;
+  border-radius: var(--mkd-radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  display: grid; place-items: center;
+  font-size: 16px; font-weight: 700;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.wz-head .close:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-soft);
+  color: var(--color-text-primary);
+}
+
+/* ── Progress bar ───────────────────────────────────── */
+.wz-progress {
+  padding: 14px 22px 0;
+}
+.wz-progress-inner {
+  display: flex; align-items: flex-start;
+  gap: 0;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--mkd-radius-lg);
+  padding: 12px 14px;
+}
+.wz-step {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  min-width: 0;
+  position: relative;
+}
+.wz-step .dot {
+  width: 32px; height: 32px;
+  border-radius: var(--mkd-radius-full);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  display: grid; place-items: center;
+  font-weight: 800; font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  transition: all .2s;
+}
+.wz-step.active .dot {
+  background: var(--ds-gradient-brand);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.16);
+}
+.wz-step.done .dot {
+  background: var(--ds-gradient-brand);
+  color: #fff;
+  border-color: transparent;
+}
+.wz-step .label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+.wz-step.active .label { color: var(--color-primary); }
+.wz-step.done .label { color: var(--color-text-primary); }
+.wz-connector {
+  flex: 1;
+  height: 2px;
+  margin: 16px 4px 0;
+  background: var(--color-border);
+  border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+}
+.wz-connector.filled::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: var(--ds-gradient-brand);
+}
+
+/* ── Wizard body ────────────────────────────────────── */
+.wz-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px;
+}
+.wz-step-pane h3 {
+  font-family: var(--font-h);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+.wz-step-pane .hint {
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  margin: 0 0 18px;
+}
+
+/* ── Choice cards (Type step) ───────────────────────── */
+.wz-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.wz-choice {
+  text-align: left;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--mkd-radius-lg);
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+  display: flex; flex-direction: column; gap: 6px;
+  position: relative;
+}
+.wz-choice:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-soft);
+}
+.wz-choice.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  box-shadow: 0 8px 22px -14px rgba(37, 99, 235, 0.6);
+}
+.wz-choice .ico {
+  width: 36px; height: 36px;
+  border-radius: var(--mkd-radius-md);
+  display: grid; place-items: center;
+  font-size: 18px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+}
+.wz-choice.selected .ico {
+  background: var(--ds-gradient-brand);
+  color: #fff; border-color: transparent;
+}
+.wz-choice .name {
+  font-weight: 700; font-size: var(--fs-lg);
+  color: var(--color-text-primary);
+}
+.wz-choice .desc {
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+.wz-choice .check {
+  position: absolute; top: 10px; right: 10px;
+  width: 20px; height: 20px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  display: none;
+  place-items: center;
+  font-size: 12px; font-weight: 800;
+}
+.wz-choice.selected .check { display: grid; }
+
+/* ── Review summary ─────────────────────────────────── */
+.wz-summary {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--mkd-radius-lg);
+  padding: 16px 18px;
+}
+.wz-summary dl {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  row-gap: 10px;
+  column-gap: 14px;
+  margin: 0;
+}
+.wz-summary dt {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  align-self: center;
+}
+.wz-summary dd {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+/* ── Footer ─────────────────────────────────────────── */
+.wz-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+.wz-foot .left { color: var(--color-text-muted); font-size: var(--fs-sm); font-weight: 600; }
+.wz-foot .right { display: flex; gap: 8px; }
+
+/* ── Helpers used by product list ───────────────────── */
+.tbl-toolbar {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; flex-wrap: wrap;
+}
+.tbl-toolbar input[type="search"] {
+  flex: 1; min-width: 220px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--mkd-radius-md);
+  font-size: var(--fs-lg);
+  color: var(--color-text-primary);
+}
+.tbl-toolbar input[type="search"]:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--mkd-focus-ring);
+}
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 720px) {
+  .wz-modal { max-height: 100vh; height: 100vh; border-radius: 0; }
+  .wz-head { padding: 14px 16px 12px; }
+  .wz-progress { padding: 12px 16px 0; }
+  .wz-progress-inner { padding: 10px; }
+  .wz-step .label { display: none; }
+  .wz-body { padding: 16px; }
+  .wz-foot { padding: 12px 16px; flex-wrap: wrap; }
+  .wz-summary dl { grid-template-columns: 1fr; row-gap: 4px; }
+  .wz-summary dt { font-size: 10px; }
+  .wz-summary dd { margin-bottom: 6px; }
+}
