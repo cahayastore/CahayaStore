@@ -1,0 +1,122 @@
+/* ════════════════════════════════════════════════════════════════════
+   CAHAYA STORE — Design System Tokens
+   Adopsi dari Marketku Design (--mkd-*) + Admin Dashboard (--ds-color-*)
+   Brand: BIRU #2563EB · Font: Plus Jakarta Sans + Sora
+   ════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap');
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* ─ Surfaces & palette (Marketku) ─ */
+  --color-bg: #FAFAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #F8FAFC;
+  --color-surface-dim: #F9FAFB;
+  --color-surface-raised: #F3F4F6;
+  --color-border: #E2E8F0;
+  --color-border-hover: #CBD5E1;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748B;
+  --color-text-subtle: #94A3B8;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-dark: #1E40AF;
+  --color-primary-soft: #EEF2FF;
+  --color-success: #10B981;
+  --color-success-soft: #ECFDF5;
+  --color-warning: #F59E0B;
+  --color-warning-soft: #FFFBEB;
+  --color-danger: #EF4444;
+  --color-danger-soft: rgba(239, 68, 68, 0.10);
+  --color-info: #0EA5E9;
+  --color-info-soft: #F0F9FF;
+
+  /* ─ Marketku Design Tokens (mkd-*) ─ */
+  --mkd-primary: var(--color-primary);
+  --mkd-primary-hover: var(--color-primary-hover);
+  --mkd-primary-soft: var(--color-primary-soft);
+  --mkd-bg: var(--color-bg);
+  --mkd-surface: var(--color-surface);
+  --mkd-surface-soft: var(--color-surface-soft);
+  --mkd-text: var(--color-text-primary);
+  --mkd-text-secondary: var(--color-text-secondary);
+  --mkd-text-muted: var(--color-text-muted);
+  --mkd-border: var(--color-border);
+  --mkd-border-soft: color-mix(in srgb, var(--color-border) 60%, transparent);
+  --mkd-focus-ring: rgba(37, 99, 235, 0.20);
+  --mkd-success: var(--color-success);
+  --mkd-warning: var(--color-warning);
+  --mkd-danger: var(--color-danger);
+  --mkd-radius-sm: 8px;
+  --mkd-radius-md: 12px;
+  --mkd-radius-lg: 14px;
+  --mkd-radius-xl: 16px;
+  --mkd-radius-full: 999px;
+  --mkd-shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --mkd-shadow-medium: 0 4px 12px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --mkd-shadow-elevated: 0 10px 30px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.05);
+
+  /* ─ Admin Dashboard Tokens (ds-*) ─ */
+  --ds-color-primary: var(--color-primary);
+  --ds-color-secondary: var(--color-text-secondary);
+  --ds-color-accent: var(--color-info);
+  --ds-color-surface: var(--color-surface);
+  --ds-color-surfaceDim: var(--color-surface-dim);
+  --ds-color-surfaceRaised: var(--color-surface-raised);
+  --ds-color-background: var(--color-bg);
+  --ds-color-foreground: var(--color-text-primary);
+  --ds-color-foregroundMuted: var(--color-text-muted);
+  --ds-color-textHeading: var(--color-text-primary);
+  --ds-color-textBody: var(--color-text-secondary);
+  --ds-color-textMuted: var(--color-text-muted);
+  --ds-color-textSubtle: var(--color-text-subtle);
+  --ds-color-textInverse: #FFFFFF;
+  --ds-color-textLabel: var(--color-text-secondary);
+  --ds-color-textPlaceholder: var(--color-text-subtle);
+  --ds-color-border: var(--color-border);
+  --ds-color-borderStrong: var(--color-border-hover);
+  --ds-color-success: var(--color-success);
+  --ds-color-warning: var(--color-warning);
+  --ds-color-error: var(--color-danger);
+  --ds-color-info: var(--color-info);
+  --ds-color-navBg: var(--color-surface);
+  --ds-color-navText: var(--color-text-primary);
+  --ds-color-navTextMuted: var(--color-text-muted);
+  --ds-color-navActiveBg: var(--color-primary-soft);
+  --ds-color-navActiveText: var(--color-primary);
+  --ds-color-navBorder: var(--color-border);
+  --ds-color-navHoverBg: var(--color-surface-soft);
+  --ds-shadow-soft: var(--mkd-shadow-soft);
+  --ds-shadow-elevated: var(--mkd-shadow-medium);
+  --ds-shadow-glow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  --ds-gradient-brand: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  --ds-gradient-cta: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+
+  /* ─ Typography ─ */
+  --font: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-h: "Sora", "Plus Jakarta Sans", system-ui, sans-serif;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 14px;
+  --fs-xl: 16px;
+
+  /* ─ Spacing ─ */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* ─ Animated background recipe ─ */
+  --mkd-bg-animated-base: linear-gradient(180deg, var(--color-surface-soft) 0%, var(--color-bg) 58%, var(--color-surface-soft) 100%);
+  --mkd-bg-animated-spot-a: radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 28%);
+  --mkd-bg-animated-spot-b: radial-gradient(circle at 86% 12%, color-mix(in srgb, var(--color-info) 9%, transparent), transparent 24%);
+  --mkd-bg-animated: var(--mkd-bg-animated-spot-a), var(--mkd-bg-animated-spot-b), var(--mkd-bg-animated-base);
+}
