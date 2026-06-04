@@ -17,9 +17,9 @@ cd ..
 pm2 startOrReload ecosystem.config.js --env production
 pm2 save
 
-# Refresh static storefront / pay landing files
+# Refresh static storefront / pay landing files and assets
 mkdir -p /var/www/cahayastore/store /var/www/cahayastore/pay
-cp -f storefront/index.html /var/www/cahayastore/store/index.html
-cp -f pay/index.html /var/www/cahayastore/pay/index.html
+rsync -a --delete storefront/ /var/www/cahayastore/store/
+rsync -a --delete pay/ /var/www/cahayastore/pay/
 
 echo "[deploy] $(date -Is) done"
