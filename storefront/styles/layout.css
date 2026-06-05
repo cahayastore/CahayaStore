@@ -8,7 +8,49 @@
 }
 .mk-header-inner { min-height: 76px; display: grid; grid-template-columns: auto minmax(220px, 1fr) auto auto; gap: 18px; align-items: center; }
 .brand { display: inline-flex; align-items: center; gap: 12px; min-width: max-content; }
-.brand-logo { width: 48px; height: 48px; object-fit: contain; border-radius: 14px; background: white; box-shadow: var(--shadow-soft); }
+.brand-logo { width: 52px; height: 52px; border-radius: 18px; background: white; box-shadow: var(--shadow-soft); }
+.brand-logo--mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: white;
+  background:
+    radial-gradient(circle at 74% 22%, rgba(255,255,255,.72), transparent 14%),
+    radial-gradient(circle at 26% 86%, rgba(14,165,233,.82), transparent 25%),
+    linear-gradient(135deg, #2563eb 0%, #0ea5e9 54%, #7c3aed 100%);
+  border: 1px solid rgba(255,255,255,.72);
+}
+.brand-logo--mark::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border: 2px solid rgba(255,255,255,.38);
+  border-radius: 14px;
+}
+.brand-logo--mark span {
+  position: relative;
+  z-index: 1;
+  font: 900 28px/1 var(--display);
+  letter-spacing: -.08em;
+  text-shadow: 0 8px 20px rgba(15,23,42,.24);
+}
+.brand-logo--mark i {
+  position: absolute;
+  right: 7px;
+  top: 6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  color: #2563eb;
+  font-style: normal;
+  font-size: 10px;
+  box-shadow: 0 8px 20px rgba(15,23,42,.18);
+}
 .brand-copy strong { display: block; color: var(--text); font: 900 18px/1.1 var(--display); letter-spacing: -.03em; }
 .brand-copy small { display: block; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .nav-search { height: 48px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--panel-line); border-radius: 999px; background: white; padding: 0 16px; box-shadow: var(--shadow-soft); color: var(--muted); }
@@ -36,7 +78,7 @@
   .mk-header { position: static; background: transparent; border: 0; }
   .mk-header-inner { min-height: 84px; grid-template-columns: 1fr auto; gap: 12px; padding-top: 14px; }
   .nav-search { grid-column: 1 / -1; }
-  .brand-logo { width: 44px; height: 44px; }
+  .brand-logo { width: 46px; height: 46px; border-radius: 16px; }
   .brand-copy strong { font-size: 16px; }
   .nav-login { display: none; }
   .footer-grid, .footer-bottom { grid-template-columns: 1fr; display: grid; gap: 18px; }
