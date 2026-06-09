@@ -159,9 +159,10 @@ router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
       let content = '';
       try { content = decryptString(s.rows[0].encrypted_content); } catch { content = ''; }
       const ct = s.rows[0].content_type;
-      if (ct === 'code') credentials = { type: 'code', stock_type: 'code', code: content, content };
+      const isUrl = /^https?:\/\/\S+$/i.test(content.trim());
+      if (isUrl) credentials = { type: 'link', stock_type: 'link', url: content.trim(), content: content.trim() };
+      else if (ct === 'code') credentials = { type: 'code', stock_type: 'code', code: content, content };
       else if (ct === 'credential') credentials = { type: 'account', stock_type: 'account', content };
-      else if (/^https?:\/\//i.test(content)) credentials = { type: 'link', stock_type: 'link', url: content, content };
       else credentials = { type: 'note', stock_type: 'note', content };
       stockType = credentials.stock_type;
     }
