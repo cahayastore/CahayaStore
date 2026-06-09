@@ -27,6 +27,7 @@ function normalizeItems(value) {
 function bannerRow(item, handlers) {
   const imageUpload = buildImageUpload({
     value: item.image_url || '',
+    preset: 'banner',
     onChange: (url) => { item.image_url = url; },
   });
 

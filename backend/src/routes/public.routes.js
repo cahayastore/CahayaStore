@@ -22,7 +22,7 @@ router.get('/banners', async (_req, res) => {
 
 router.get('/categories', async (_req, res) => {
   const r = await query(
-    "SELECT id, name, slug FROM categories WHERE is_active = TRUE ORDER BY name"
+    "SELECT id, name, slug, image_url FROM categories WHERE is_active = TRUE ORDER BY name"
   );
   res.json({ success: true, data: r.rows });
 });

@@ -3,10 +3,11 @@
 import { el } from './dom.js';
 import { API_BASE, session } from './api.js';
 
-async function uploadFile(file) {
+async function uploadFile(file, preset) {
   const fd = new FormData();
   fd.append('file', file);
-  const res = await fetch(API_BASE + '/api/admin/uploads', {
+  const qs = preset ? ('?preset=' + encodeURIComponent(preset)) : '';
+  const res = await fetch(API_BASE + '/api/admin/uploads' + qs, {
     method: 'POST',
     headers: { Authorization: `Bearer ${session.getToken()}` },
     body: fd,
@@ -23,10 +24,11 @@ async function uploadFile(file) {
  * @param {object} opts
  * @param {string} opts.value      current image URL
  * @param {function} opts.onChange called with the new URL (or '' when cleared)
+ * @param {string} [opts.preset]   compression preset: product|category|banner
  * @param {string} [opts.previewClass]
  * @returns {HTMLElement}
  */
-export function buildImageUpload({ value = '', onChange, previewClass = '' }) {
+export function buildImageUpload({ value = '', onChange, preset = '', previewClass = '' }) {
   let current = value || '';
 
   const preview = el('img', {
@@ -50,7 +52,7 @@ export function buildImageUpload({ value = '', onChange, previewClass = '' }) {
       status.textContent = 'Mengunggah…';
       btn.disabled = true;
       try {
-        const url = await uploadFile(file);
+        const url = await uploadFile(file, preset);
         current = url;
         preview.src = url;
         preview.style.display = '';

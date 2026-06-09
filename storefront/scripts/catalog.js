@@ -67,6 +67,22 @@ async function fetchProducts() {
   return raw.map(normalizeProduct).filter((product) => product.isActive);
 }
 
+async function fetchCategoryImages() {
+  try {
+    const res = await fetch('https://api.cahayastore.me/api/categories', { cache: 'no-store' });
+    if (!res.ok) return new Map();
+    const json = await res.json();
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    const map = new Map();
+    for (const c of rows) {
+      if (c.name && c.image_url) map.set(text(c.name).toLowerCase(), String(c.image_url));
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
 function buildCategories(products) {
   const map = new Map();
   for (const product of products) {
@@ -125,8 +141,11 @@ function productCard(product) {
 }
 
 function categoryCard(category) {
+  const mark = category.imageUrl
+    ? `<div class="mark mark--img"><img src="${escapeHtml(category.imageUrl)}" alt="${escapeHtml(category.name)}" loading="lazy" /></div>`
+    : `<div class="mark">${escapeHtml(category.name[0]?.toUpperCase() || 'P')}</div>`;
   return `<a class="category-card" href="#products" data-category-link="${escapeHtml(category.name.toLowerCase())}" aria-label="Kategori ${escapeHtml(category.name)}">
-    <div class="mark">${escapeHtml(category.name[0]?.toUpperCase() || 'P')}</div>
+    ${mark}
     <b>${escapeHtml(category.name)}</b>
     <small>${category.count} produk</small>
   </a>`;
@@ -155,8 +174,14 @@ function renderProducts(products) {
   setText('[data-product-count]', String(products.length));
 }
 
-function renderCategories(products) {
+function renderCategories(products, imageMap) {
   const categories = buildCategories(products);
+  if (imageMap) {
+    for (const c of categories) {
+      const img = imageMap.get(text(c.name).toLowerCase());
+      if (img) c.imageUrl = img;
+    }
+  }
   const wrap = document.querySelector('[data-categories]');
   if (wrap) wrap.innerHTML = categories.map(categoryCard).join('');
   setText('[data-category-status]', categories.length ? `${categories.length} kategori` : 'Belum ada kategori');
@@ -215,9 +240,9 @@ function bindWishlist() {
 
 async function initCatalog() {
   try {
-    const products = await fetchProducts();
+    const [products, categoryImages] = await Promise.all([fetchProducts(), fetchCategoryImages()]);
     renderProducts(products);
-    renderCategories(products);
+    renderCategories(products, categoryImages);
     renderPreview(products);
     bindSearch();
     bindCategoryFilter();
@@ -225,7 +250,7 @@ async function initCatalog() {
   } catch (error) {
     console.error(error);
     renderProducts([]);
-    renderCategories([]);
+    renderCategories([], null);
     renderPreview([]);
     setText('[data-product-status]', 'Gagal memuat API produk');
   }

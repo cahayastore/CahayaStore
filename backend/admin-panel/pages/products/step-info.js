@@ -40,6 +40,7 @@ export function renderStepInfo(ctx) {
 
   const imageUpload = buildImageUpload({
     value: form.image_url || '',
+    preset: 'product',
     onChange: (url) => setField('image_url', url),
   });
 

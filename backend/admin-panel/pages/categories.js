@@ -1,6 +1,7 @@
 import { el, $, showModal, closeModal, alertBox } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
+import { buildImageUpload } from '../upload-widget.js';
 
 function rowActions(c, onReload) {
   return el('div', { class: 'row-actions' },
@@ -17,18 +18,25 @@ function rowActions(c, onReload) {
 }
 
 function openForm(c, onReload) {
+  const state = { image_url: c?.image_url || '' };
+  const imageUpload = buildImageUpload({
+    value: state.image_url,
+    preset: 'category',
+    onChange: (url) => { state.image_url = url; },
+  });
   const f = el('form', {},
     el('div', { class: 'field' }, el('label', {}, 'Nama'),
       el('input', { name: 'name', value: c?.name || '', required: true })),
     el('div', { class: 'field' }, el('label', {}, 'Slug'),
       el('input', { name: 'slug', value: c?.slug || '', required: true })),
+    el('div', { class: 'field' }, el('label', {}, 'Gambar Kategori'), imageUpload),
     el('div', { class: 'field' }, el('label', {},
       el('input', { type: 'checkbox', name: 'is_active', checked: c?.is_active !== false }),
       ' Aktif'))
   );
   showModal(c ? 'Edit Kategori' : 'Tambah Kategori', f, async () => {
     const fd = new FormData(f);
-    const body = { name: fd.get('name'), slug: fd.get('slug'), is_active: !!fd.get('is_active') };
+    const body = { name: fd.get('name'), slug: fd.get('slug'), image_url: state.image_url || null, is_active: !!fd.get('is_active') };
     if (c) await api('/api/admin/categories/' + c.id, { method: 'PUT', body: JSON.stringify(body) });
     else await api('/api/admin/categories', { method: 'POST', body: JSON.stringify(body) });
     closeModal();

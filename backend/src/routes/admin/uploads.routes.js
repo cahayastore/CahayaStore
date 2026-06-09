@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const sharp = require('sharp');
 const { requireAuth } = require('../../auth.middleware');
 
 const router = express.Router();
@@ -16,35 +17,28 @@ const PUBLIC_BASE = process.env.UPLOADS_PUBLIC_BASE || 'https://api.cahayastore.
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
-const EXT = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-  'image/gif': '.gif',
-  'image/avif': '.avif',
+
+// Per-context output sizing. Square for product/category cards, wide for banners.
+const PRESETS = {
+  product:  { width: 800,  height: 800,  fit: 'cover' },
+  category: { width: 400,  height: 400,  fit: 'cover' },
+  banner:   { width: 1600, height: 600,  fit: 'cover' },
+  default:  { width: 1200, height: 1200, fit: 'inside' },
 };
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
-  filename: (_req, file, cb) => {
-    const ext = EXT[file.mimetype] || path.extname(file.originalname).toLowerCase() || '.bin';
-    const name = crypto.randomBytes(16).toString('hex') + ext;
-    cb(null, name);
-  },
-});
-
+// Keep raw bytes in memory; sharp compresses to disk as WebP.
 const upload = multer({
-  storage,
-  limits: { fileSize: 4 * 1024 * 1024 }, // 4MB (nginx client_max_body_size is 5m)
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 }, // accept up to 8MB raw; output is compressed
   fileFilter: (_req, file, cb) => {
     if (ALLOWED.has(file.mimetype)) return cb(null, true);
     cb(new Error('Tipe file tidak didukung. Gunakan JPG, PNG, WEBP, GIF, atau AVIF.'));
   },
 });
 
-// POST /api/admin/uploads  (multipart/form-data, field: "file")
+// POST /api/admin/uploads?preset=product|category|banner  (multipart, field: "file")
 router.post('/uploads', requireAuth(['owner', 'admin']), (req, res) => {
-  upload.single('file')(req, res, (err) => {
+  upload.single('file')(req, res, async (err) => {
     if (err) {
       const code = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
       return res.status(code).json({ success: false, message: err.message });
@@ -52,8 +46,30 @@ router.post('/uploads', requireAuth(['owner', 'admin']), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'File wajib diunggah (field "file").' });
     }
-    const url = `${PUBLIC_BASE}/${req.file.filename}`;
-    res.status(201).json({ success: true, url, filename: req.file.filename, size: req.file.size });
+    try {
+      const presetKey = String(req.query.preset || '').toLowerCase();
+      const preset = PRESETS[presetKey] || PRESETS.default;
+      const filename = crypto.randomBytes(16).toString('hex') + '.webp';
+      const outPath = path.join(UPLOADS_DIR, filename);
+
+      await sharp(req.file.buffer, { animated: true })
+        .rotate() // respect EXIF orientation
+        .resize({
+          width: preset.width,
+          height: preset.height,
+          fit: preset.fit,
+          withoutEnlargement: true,
+        })
+        .webp({ quality: 80, effort: 4 })
+        .toFile(outPath);
+
+      const { size } = fs.statSync(outPath);
+      const url = `${PUBLIC_BASE}/${filename}`;
+      res.status(201).json({ success: true, url, filename, size });
+    } catch (e) {
+      console.error('[uploads]', e);
+      res.status(422).json({ success: false, message: 'Gagal memproses gambar.' });
+    }
   });
 });
 
