@@ -16,6 +16,15 @@ function getParam(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
+// Slug from /produk/<slug> path; fallback to ?product=<id|slug>.
+function getProductKey() {
+  const m = location.pathname.match(/\/produk\/([^/?#]+)/i);
+  if (m && m[1]) return { type: 'slug', value: decodeURIComponent(m[1]) };
+  const q = getParam('product');
+  if (q) return { type: 'id', value: q };
+  return null;
+}
+
 function initial(name) {
   const w = text(name).split(/\s+/).filter(Boolean).slice(0, 2);
   return w.map((x) => x[0]?.toUpperCase()).join('') || 'CS';
@@ -23,13 +32,21 @@ function initial(name) {
 
 function num(v) { return Number(v || 0); }
 
+async function fetchProductBySlug(slug) {
+  const res = await fetch(`${API}/products/${encodeURIComponent(slug)}`, { cache: 'no-store' });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('Gagal memuat produk');
+  const json = await res.json();
+  return json?.data || null;
+}
+
 async function fetchProductById(id) {
-  // Public API exposes list + by-slug. Find by id from the list.
+  // Fallback for legacy ?product=<id> links.
   const res = await fetch(`${API}/products?limit=100`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Gagal memuat produk');
   const json = await res.json();
   const rows = Array.isArray(json?.data) ? json.data : [];
-  return rows.find((p) => String(p.id) === String(id)) || null;
+  return rows.find((p) => String(p.id) === String(id) || String(p.slug) === String(id)) || null;
 }
 
 function render(product) {
@@ -93,17 +110,19 @@ function render(product) {
   const buy = wrap.querySelector('[data-buy]');
   if (buy) {
     buy.addEventListener('click', () => {
-      // Checkout flow placeholder — wired to order endpoint later.
-      alert('Checkout untuk "' + text(product.name) + '" akan segera tersedia.');
+      // Checkout happens on the pay subdomain.
+      window.location.href = `https://pay.cahayastore.me/?product=${encodeURIComponent(product.id)}`;
     });
   }
 }
 
 async function init() {
-  const id = getParam('product');
-  if (!id) { render(null); return; }
+  const key = getProductKey();
+  if (!key) { render(null); return; }
   try {
-    const product = await fetchProductById(id);
+    const product = key.type === 'slug'
+      ? await fetchProductBySlug(key.value)
+      : await fetchProductById(key.value);
     render(product);
   } catch (e) {
     console.error(e);

@@ -10,7 +10,7 @@
 .banner-dot.is-active { width: 26px; background: var(--primary); }
 .category-strip, .products-section, .why { margin-top: 24px; padding: 20px; }
 .section-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; }
-.section-head h2 { margin: 0; font: 700 24px/36px var(--display); }
+.section-head h2 { margin: 0; font: 700 16px/20px var(--display); }
 .section-head span { color: var(--muted); font-size: 12px; font-weight: 400; font-family: var(--font-ui); }
 .category-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; }
 .category-card { min-height: 92px; border: 1px solid var(--panel-line); border-radius: var(--radius-md); background: white; display: grid; place-items: center; text-align: center; padding: 10px; box-shadow: var(--shadow-1); transition: box-shadow .15s ease; }

@@ -38,6 +38,7 @@ function normalizeProduct(product) {
   const original = getOriginalPrice(product);
   return {
     id: text(product.id || product.slug || name),
+    slug: text(product.slug || product.id || name),
     name,
     category,
     price,
@@ -115,7 +116,7 @@ function soldLabel(product) {
 
 function productCard(product) {
   const pct = discountPercent(product);
-  const href = `https://pay.cahayastore.me?product=${encodeURIComponent(product.id)}`;
+  const href = `/produk/${encodeURIComponent(product.slug || product.id)}`;
   return `<article class="product-card" data-product-card data-name="${escapeHtml(product.name.toLowerCase())}" data-category="${escapeHtml(product.category.toLowerCase())}">
     <a class="pc-media" href="${href}" aria-label="${escapeHtml(product.name)}">
       ${pct > 0 ? `<span class="pc-discount">-${pct}%</span>` : ''}
