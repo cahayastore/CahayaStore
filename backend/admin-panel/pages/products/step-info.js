@@ -1,6 +1,7 @@
 /* Step 2 — Info dasar produk (nama, slug, deskripsi, kategori) */
 import { el } from '../../dom.js';
 import { slugify } from './constants.js';
+import { buildImageUpload } from '../../upload-widget.js';
 
 export function renderStepInfo(ctx) {
   const { form, setField, categories = [] } = ctx;
@@ -37,22 +38,9 @@ export function renderStepInfo(ctx) {
     oninput: (e) => setField('description', e.target.value)
   }, form.description || '');
 
-  const imgPreview = el('img', {
-    src: form.image_url || '',
-    alt: '',
-    style: 'width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--color-border);background:var(--color-surface-soft)' + (form.image_url ? '' : ';display:none')
-  });
-  const imgInput = el('input', {
-    name: 'image_url',
-    type: 'url',
+  const imageUpload = buildImageUpload({
     value: form.image_url || '',
-    placeholder: 'https://.../produk.jpg',
-    oninput: (e) => {
-      const v = e.target.value.trim();
-      setField('image_url', v);
-      if (v) { imgPreview.src = v; imgPreview.style.display = ''; }
-      else { imgPreview.style.display = 'none'; }
-    }
+    onChange: (url) => setField('image_url', url),
   });
 
   const catSelect = el('select', {
@@ -80,20 +68,19 @@ export function renderStepInfo(ctx) {
     el('p', { class: 'hint' }, 'Detail yang akan ditampilkan di storefront dan halaman pesanan.'),
 
     el('div', { class: 'field' }, el('label', {}, 'Nama Produk *'), nameInput),
-    el('div', { class: 'field' }, el('label', {}, 'Slug URL *'), slugInput,
+    el('div', { class: 'field' }, el('label', {}, 'Slug URL'), slugInput,
       el('div', { class: 'hint', style: 'margin-top:4px' },
-        'Otomatis dibuat dari nama, bisa disesuaikan.')),
+        'Otomatis dibuat dari nama. Boleh dikosongkan — sistem akan membuatkan slug unik.')),
     el('div', { class: 'field' }, el('label', {}, 'Kategori'), catSelect),
-    el('div', { class: 'field' }, el('label', {}, 'Gambar Produk (URL)'), imgInput,
+    el('div', { class: 'field' }, el('label', {}, 'Gambar Produk'), imageUpload,
       el('div', { class: 'hint', style: 'margin-top:4px' },
-        'URL gambar yang tampil di card storefront. Kosongkan untuk pakai inisial.'),
-      el('div', { style: 'margin-top:10px' }, imgPreview)),
+        'Upload gambar (maks 4MB) atau tempel URL. Kosongkan untuk pakai inisial.')),
     el('div', { class: 'field' }, el('label', {}, 'Deskripsi'), descInput)
   );
 }
 
 export function validateStepInfo(form) {
   if (!form.name || form.name.trim().length < 3) return 'Nama produk minimal 3 karakter.';
-  if (!form.slug || form.slug.length < 3) return 'Slug minimal 3 karakter.';
+  // Slug optional — server auto-generates a unique slug from the name when blank.
   return null;
 }

@@ -2,6 +2,7 @@
 import { el, alertBox } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
+import { buildImageUpload } from '../upload-widget.js';
 
 const SETTING_KEY = 'store.banners';
 
@@ -24,26 +25,14 @@ function normalizeItems(value) {
 }
 
 function bannerRow(item, handlers) {
-  const preview = item.image_url
-    ? el('img', { src: item.image_url, alt: item.alt || '', class: 'banner-thumb' })
-    : el('div', { class: 'banner-thumb banner-thumb--empty' }, 'No image');
-
-  const imageInput = el('input', {
-    type: 'url', value: item.image_url, placeholder: 'https://.../banner.jpg',
-    oninput: (e) => { item.image_url = e.target.value.trim(); preview.replaceWith && null; }
-  });
-  imageInput.addEventListener('input', () => {
-    if (item.image_url) {
-      preview.tagName === 'IMG'
-        ? (preview.src = item.image_url)
-        : handlers.refresh();
-    }
+  const imageUpload = buildImageUpload({
+    value: item.image_url || '',
+    onChange: (url) => { item.image_url = url; },
   });
 
   return el('div', { class: 'banner-item' },
-    preview,
     el('div', { class: 'banner-fields' },
-      el('div', { class: 'field' }, el('label', {}, 'URL Gambar'), imageInput),
+      el('div', { class: 'field' }, el('label', {}, 'Gambar Banner'), imageUpload),
       el('div', { class: 'field' }, el('label', {}, 'Link (opsional)'),
         el('input', { type: 'url', value: item.link, placeholder: 'https://...',
           oninput: (e) => { item.link = e.target.value.trim(); } })),

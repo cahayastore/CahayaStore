@@ -53,6 +53,14 @@ app.use('/api', require('./src/routes/public.routes'));
 app.use('/api', require('./src/routes/checkout.routes'));
 app.use('/api/admin', require('./src/routes/admin'));
 
+// Serve uploaded media from a persistent dir (survives deploys).
+const UPLOADS_DIR = process.env.UPLOADS_DIR || '/var/www/cahayastore/uploads';
+app.use('/uploads', express.static(UPLOADS_DIR, {
+  maxAge: '7d',
+  immutable: true,
+  fallthrough: true,
+}));
+
 // Serve mini admin SPA
 const ADMIN_DIR = path.resolve(__dirname, 'admin-panel');
 app.use('/admin', express.static(ADMIN_DIR, { extensions: ['html'] }));
