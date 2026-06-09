@@ -3,97 +3,43 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cahaya Store — Akun Premium Terpercaya</title>
-  <meta name="description" content="Cahaya Store menyediakan akun premium aktif, bergaransi, dan proses cepat." />
+  <title>Detail Produk — Cahaya Store</title>
+  <meta name="description" content="Detail produk digital Cahaya Store." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Sora:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/tokens.css?v=20260604-neon" />
-  <link rel="stylesheet" href="/styles/layout.css?v=20260604-neon" />
-  <link rel="stylesheet" href="/styles/home.css?v=20260604-neon" />
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&family=Exo:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cahayastore.me/styles/tokens.css?v=20260609-itemku2" />
+  <link rel="stylesheet" href="https://cahayastore.me/styles/product.css?v=20260609-1" />
 </head>
 <body>
-  <div class="top-strip">
-    <div class="container">
-      <div class="strip-left">
-        <span class="strip-item">⚡ Proses Cepat</span><span class="strip-item">🛡️ Aman 100%</span><span class="strip-item">💬 24/7 Support</span>
-      </div>
-      <div class="strip-right">
-        <a href="#contact">💬 Hubungi Kami</a><a href="https://pay.cahayastore.me">◎ Cek Pesanan</a><a href="https://admin.cahayastore.me/admin/">♙ Login / Daftar</a>
-      </div>
-    </div>
-  </div>
-
-  <header class="site-header">
-    <div class="container">
-      <a class="logo" href="/" aria-label="Cahaya Store">
-        <span class="logo-mark">C✦</span><span class="logo-text"><strong>CAHAYA</strong><span>STORE✦</span></span>
+  <header class="pd-header">
+    <div class="container pd-header-inner">
+      <a class="brand" href="https://cahayastore.me/" aria-label="Cahaya Store">
+        <img class="brand-full-logo" src="https://cahayastore.me/assets/logo-light.png?v=2" alt="Cahaya Store" />
       </a>
-      <nav class="nav" aria-label="Navigasi utama">
-        <a class="active" href="#home">Beranda</a><a href="#products">Akun Kopi</a><a href="#products">Akun Makanan</a><a href="#how">Cara Order</a><a href="#testimonials">Testimoni</a>
-      </nav>
-      <div class="actions"><button class="icon-pill" aria-label="Cari">⌕</button><a class="icon-pill cart" href="https://pay.cahayastore.me" aria-label="Keranjang">🛒<span class="badge-count">0</span></a></div>
+      <a class="btn-back" href="https://cahayastore.me/">← Kembali ke Toko</a>
     </div>
   </header>
 
-  <main id="home">
-    <section class="hero container">
-      <div class="hero-card panel">
-        <div class="hero-copy">
-          <div class="eyebrow">Selamat datang di</div>
-          <h1>Cahaya <span class="gradient-text">Store</span></h1>
-          <p>Pusat jual beli akun premium terpercaya. Akun aktif, bergaransi, dan harga terbaik!</p>
-          <div class="benefits-row">
-            <div class="benefit-chip">⚙️ <span><b>Proses Instan</b><small>Langsung dikirim</small></span></div>
-            <div class="benefit-chip">🛡️ <span><b>Garansi Aman</b><small>Penggantian jika bermasalah</small></span></div>
-            <div class="benefit-chip">🎧 <span><b>Support 24/7</b><small>Admin siap membantu</small></span></div>
-          </div>
-          <a class="btn btn-primary" href="#products">Lihat Semua Produk ›</a>
-        </div>
-        <div class="hero-visual" aria-hidden="true">
-          <div class="stage">
-            <div class="phone"><div><div class="phone-mark">C</div><span>Cahaya Store</span><br><small>Akun Premium<br>Harga Terbaik</small><div class="rating">★★★★★</div></div></div>
-            <div class="float-card left-1 logo-kopi">kopi kenangan ♥</div><div class="float-card left-2 logo-kfc">KFC</div><div class="float-card left-3 logo-chagee">CHAGEE</div>
-            <div class="float-card right-1 logo-tomoro">TOMORO COFFEE</div><div class="float-card right-2 logo-janji">Janji Jiwa</div><div class="float-card right-3 logo-chatime">Chatime</div>
-          </div>
-        </div>
-      </div>
-    </section>
+  <main class="container pd-main">
+    <nav class="pd-crumb" aria-label="Breadcrumb">
+      <a href="https://cahayastore.me/">Beranda</a>
+      <span>/</span>
+      <span data-crumb-cat>Produk</span>
+    </nav>
 
-    <section class="category-strip panel container" id="categories"><h2 class="section-title">Kategori Akun</h2><div class="category-grid" data-categories></div></section>
-
-    <section class="products-section panel container" id="products">
-      <div class="section-head"><h2>Akun Terlaris</h2><a href="#products">Lihat Semua ›</a></div>
-      <div class="product-grid" data-products></div>
-    </section>
-
-    <section class="why panel container" id="how">
-      <h2 class="section-title">Kenapa pilih Cahaya Store?</h2>
-      <div class="why-grid">
-        <div class="why-item"><span class="why-icon">✦</span><div><b>Akun 100% Aktif</b><p>Akun real dan siap pakai.</p></div></div>
-        <div class="why-item"><span class="why-icon">⚡</span><div><b>Proses Cepat</b><p>Pengiriman instan tanpa menunggu lama.</p></div></div>
-        <div class="why-item"><span class="why-icon">☆</span><div><b>Harga Terbaik</b><p>Harga bersaing dan terjangkau.</p></div></div>
-        <div class="why-item"><span class="why-icon">☏</span><div><b>Support 24/7</b><p>Admin siap membantu kapan saja.</p></div></div>
-        <div class="why-item"><span class="why-icon">🛡</span><div><b>Garansi Penggantian</b><p>Akun bermasalah? Kami ganti baru.</p></div></div>
-      </div>
-    </section>
-
-    <section class="testimonials panel container" id="testimonials">
-      <div class="section-head"><h2>Apa kata mereka?</h2><a href="#testimonials">Lihat Semua ›</a></div>
-      <div class="testimonial-grid">
-        <article class="testimonial-card"><div class="person"><span class="avatar"></span><b>Rizky Pratama</b></div><div class="rating">★★★★★</div><p>Akun Kopi Kenangan aman & cepat. Recommended!</p></article>
-        <article class="testimonial-card"><div class="person"><span class="avatar"></span><b>Dewi Lestari</b></div><div class="rating">★★★★★</div><p>Tomoro Coffee langsung aktif, terima kasih Cahaya Store!</p></article>
-        <article class="testimonial-card"><div class="person"><span class="avatar"></span><b>Fahmi Alfarizi</b></div><div class="rating">★★★★★</div><p>Janji Jiwa aman, harga murah, pelayanan cepat!</p></article>
-        <article class="testimonial-card"><div class="person"><span class="avatar"></span><b>Siti Nurhaliza</b></div><div class="rating">★★★★★</div><p>Chatime & Chagee semua aktif, trusted seller!</p></article>
-      </div>
-    </section>
-
-    <section class="newsletter panel container"><div class="gift">🎁</div><div><h3>Dapatkan info promo & produk terbaru!</h3><p>Jangan sampai ketinggalan promo menarik dari Cahaya Store.</p></div><form><input type="email" placeholder="Masukkan email kamu" /><button class="btn btn-primary">Langganan</button></form></section>
+    <div class="pd-grid" data-detail>
+      <div class="pd-skeleton">Memuat produk…</div>
+    </div>
   </main>
 
-  <footer class="footer" id="contact"><div class="container footer-grid"><div><a class="logo" href="/"><span class="logo-text"><strong>Cahaya</strong><span>STORE✦</span></span></a><p>Cahaya Store adalah tempat terpercaya untuk membeli akun premium favoritmu dengan harga terbaik.</p></div><div><h4>Informasi</h4><nav class="footer-links"><a>Tentang Kami</a><a>Cara Order</a><a>Pembayaran</a><a>Garansi</a><a>FAQ</a></nav></div><div><h4>Kategori</h4><nav class="footer-links"><a>Kopi Kenangan</a><a>Tomoro Coffee</a><a>KFC</a><a>Janji Jiwa</a><a>Chagee</a><a>Chatime</a></nav></div><div><h4>Kontak Kami</h4><p>WhatsApp: 0882-1234-5678<br>Email: halo@cahayastore.me<br>Jam Operasional: 24/7<br>Indonesia</p></div></div><div class="container footer-bottom"><span>© 2026 Cahaya Store. All rights reserved.</span><span class="payments">Pembayaran Aman · DANA · OVO · GOPAY · QRIS · BCA · BNI</span></div></footer>
+  <footer class="pd-footer">
+    <div class="container">
+      <span>© 2026 Cahaya Store.</span>
+      <span class="payments">Pembayaran aman · QRIS · Transfer · E-wallet</span>
+    </div>
+  </footer>
 
-  <nav class="mobile-nav" aria-label="Navigasi mobile"><a class="active" href="#home"><strong>⌂</strong>Beranda</a><a href="#categories"><strong>▦</strong>Kategori</a><a href="#products"><strong>▣</strong>Order</a><a href="#how"><strong>🛡</strong>Garansi</a><a href="https://admin.cahayastore.me/admin/"><strong>♙</strong>Akun</a></nav>
-  <script type="module" src="/scripts/catalog.js?v=20260604-neon2"></script>
+  <script type="module" src="https://cahayastore.me/scripts/product.js?v=20260609-1"></script>
 </body>
 </html>

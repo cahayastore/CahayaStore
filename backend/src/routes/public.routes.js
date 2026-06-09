@@ -44,7 +44,8 @@ router.get('/products', async (req, res) => {
     where.push(`LOWER(p.name) LIKE $${params.length}`);
   }
   const sql = `
-    SELECT p.id, p.name, p.slug, p.description, p.price, p.original_price, p.image_url, p.product_type,
+    SELECT p.id, p.name, p.slug, p.description, p.price, p.original_price,
+           COALESCE(p.image_url, c.image_url) AS image_url, p.product_type,
            c.name AS category_name, c.slug AS category_slug,
            (SELECT COUNT(*) FROM product_stocks s WHERE s.product_id = p.id AND s.status = 'available') AS stock_count,
            (SELECT COUNT(*) FROM product_stocks s WHERE s.product_id = p.id AND s.status = 'sold') AS sold_count
@@ -60,7 +61,8 @@ router.get('/products', async (req, res) => {
 
 router.get('/products/:slug', async (req, res) => {
   const r = await query(
-    `SELECT p.id, p.name, p.slug, p.description, p.price, p.original_price, p.image_url, p.product_type,
+    `SELECT p.id, p.name, p.slug, p.description, p.price, p.original_price,
+            COALESCE(p.image_url, c.image_url) AS image_url, p.product_type,
             c.name AS category_name, c.slug AS category_slug,
             (SELECT COUNT(*) FROM product_stocks s WHERE s.product_id = p.id AND s.status = 'available') AS stock_count,
             (SELECT COUNT(*) FROM product_stocks s WHERE s.product_id = p.id AND s.status = 'sold') AS sold_count
