@@ -9,7 +9,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { query, tx } = require('../db');
-const { createInvoice } = require('../payment/myqris.service');
+const { createInvoice, getUniqueMax } = require('../payment/myqris.service');
 const { decryptString } = require('../crypto');
 
 const router = express.Router();
@@ -53,12 +53,28 @@ router.post('/public/web-checkout', async (req, res) => {
   const orderNo = genOrderNo();
   const accessToken = genToken();
 
+  // Unique amount so PayHook can disambiguate concurrent orders by exact rupiah.
+  let uniqueAmount = total;
+  try {
+    const max = await getUniqueMax();
+    const taken = await query(
+      `SELECT p.amount FROM payments p
+         JOIN orders o ON o.id = p.order_id
+        WHERE p.status = 'pending' AND p.amount BETWEEN $1 AND $2`,
+      [total, total + max]
+    );
+    const used = new Set(taken.rows.map((r) => Number(r.amount)));
+    for (let add = 0; add <= max; add += 1) {
+      if (!used.has(total + add)) { uniqueAmount = total + add; break; }
+    }
+  } catch { uniqueAmount = total; }
+
   try {
     const result = await tx(async (client) => {
       const o = await client.query(
         `INSERT INTO orders (order_no, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token)
          VALUES ($1,$2,$3,$4,'pending_payment','pending',$5) RETURNING *`,
-        [orderNo, String(email).toLowerCase().trim(), customerWhatsapp || null, total, accessToken]
+        [orderNo, String(email).toLowerCase().trim(), customerWhatsapp || null, uniqueAmount, accessToken]
       );
       const order = o.rows[0];
       for (const ln of lines) {
@@ -70,16 +86,16 @@ router.post('/public/web-checkout', async (req, res) => {
       }
       let invoice;
       try {
-        invoice = await createInvoice({ orderNo: order.order_no, amount: total });
+        invoice = await createInvoice({ orderNo: order.order_no, amount: uniqueAmount });
       } catch (e) {
         if (e.code === 'MYQRIS_NOT_CONFIGURED') {
-          invoice = { provider: 'myqris', payment_ref: null, qr_payload: null, amount: total, raw: null };
+          invoice = { provider: 'myqris', payment_ref: null, qr_payload: null, amount: uniqueAmount, raw: null };
         } else throw e;
       }
       await client.query(
         `INSERT INTO payments (order_id, gateway, payment_ref, qr_payload, amount, status, raw_payload)
          VALUES ($1,$2,$3,$4,$5,'pending',$6)`,
-        [order.id, invoice.provider, invoice.payment_ref, invoice.qr_payload, total, invoice.raw]
+        [order.id, invoice.provider, invoice.payment_ref, invoice.qr_payload, uniqueAmount, invoice.raw]
       );
       return { order, invoice };
     });
@@ -89,7 +105,7 @@ router.post('/public/web-checkout', async (req, res) => {
       data: {
         orderId: result.order.order_no,
         accessToken,
-        amount: total,
+        amount: uniqueAmount,
         productName: lines[0].name + (lines.length > 1 ? ` +${lines.length - 1} lainnya` : ''),
         quantity: lines.reduce((s, l) => s + l.quantity, 0),
         qrImageUrl: null,

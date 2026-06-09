@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const { query, tx } = require('../db');
-const { verifyWebhookSignature } = require('../payment/myqris.service');
+const { verifyPayhookToken } = require('../payment/myqris.service');
 const { getSetting, KEYS } = require('../settings.service');
 const { safeEqual } = require('../crypto');
 
@@ -9,86 +9,114 @@ const router = express.Router();
 
 /*
  * Mount this router with raw body parser BEFORE express.json.
- * Example: app.use('/api/webhooks', express.raw({ type: 'application/json', limit: '1mb' }), webhookRouter)
+ * Raw parser uses a wildcard type so JSON and form bodies both arrive as Buffer.
  */
 
+// Deliver stock for a paid order (assign one available item per order item).
+async function deliverOrder(client, orderId) {
+  const oi = await client.query(
+    "SELECT id, product_id FROM order_items WHERE order_id = $1",
+    [orderId]
+  );
+  for (const item of oi.rows) {
+    const stock = await client.query(
+      `SELECT id FROM product_stocks
+        WHERE product_id = $1 AND status = 'available'
+        ORDER BY created_at ASC
+        LIMIT 1 FOR UPDATE SKIP LOCKED`,
+      [item.product_id]
+    );
+    if (stock.rows.length) {
+      const stockId = stock.rows[0].id;
+      await client.query("UPDATE product_stocks SET status='sold', sold_at=now() WHERE id = $1", [stockId]);
+      await client.query("UPDATE order_items SET delivered_stock_id = $2 WHERE id = $1", [item.id, stockId]);
+    }
+  }
+  await client.query(
+    "INSERT INTO deliveries (order_id, delivery_type, status) VALUES ($1, 'manual', 'delivered')",
+    [orderId]
+  );
+}
+
+/*
+ * PayHook webhook — POST /api/webhooks/myqris
+ * PayHook (Android app) forwards bank/e-wallet notifications. It posts the
+ * received transaction amount + a shared token. We match a pending payment by
+ * exact amount, mark it paid, and deliver the product.
+ *
+ * Accepts JSON or form-encoded body. Fields (flexible):
+ *   amount | nominal | jumlah   → number (required)
+ *   token  | secret  | key      → shared token (or header X-PayHook-Token)
+ *   order_ref | order_no        → optional explicit match
+ */
 router.post('/myqris', async (req, res) => {
   const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
-  const sig = req.header('x-signature') || req.header('X-Signature') || '';
+  let payload = {};
+  try { payload = JSON.parse(rawBody); }
+  catch {
+    // try form-encoded
+    try { payload = Object.fromEntries(new URLSearchParams(rawBody)); } catch { payload = {}; }
+  }
+
+  const provided = req.header('x-payhook-token') || req.header('x-webhook-token')
+    || payload.token || payload.secret || payload.key || '';
+
   let verify;
-  try {
-    verify = await verifyWebhookSignature(rawBody, sig);
-  } catch (e) {
-    return res.status(503).json({ success: false, message: e.message });
-  }
+  try { verify = await verifyPayhookToken(provided); }
+  catch (e) { return res.status(503).json({ success: false, message: e.message }); }
   if (!verify.ok) {
-    console.warn('[webhook myqris] invalid signature', verify.reason);
-    return res.status(401).json({ success: false, message: 'Invalid signature' });
+    console.warn('[payhook] invalid token', verify.reason);
+    return res.status(401).json({ success: false, message: 'Invalid token' });
   }
-  let payload;
-  try { payload = JSON.parse(rawBody); } catch { return res.status(400).json({ success: false, message: 'Bad JSON' }); }
-  const { order_ref, payment_ref, status, paid_at } = payload || {};
-  if (!order_ref && !payment_ref) {
-    return res.status(400).json({ success: false, message: 'order_ref or payment_ref required' });
+
+  const orderRef = payload.order_ref || payload.order_no || null;
+  const amount = Number(payload.amount || payload.nominal || payload.jumlah || 0);
+  if (!orderRef && !(amount > 0)) {
+    return res.status(400).json({ success: false, message: 'amount atau order_ref wajib diisi.' });
   }
+
   try {
-    await tx(async (client) => {
-      const o = await client.query(
-        "SELECT * FROM orders WHERE order_no = $1 FOR UPDATE",
-        [order_ref || payment_ref]
-      );
-      if (!o.rows.length) return;
-      const order = o.rows[0];
-      const newPaid = String(status).toLowerCase() === 'paid';
-      if (newPaid && order.payment_status !== 'paid') {
-        await client.query(
-          "UPDATE payments SET status='paid', paid_at = COALESCE($2, now()), raw_payload = $3 WHERE order_id = $1",
-          [order.id, paid_at ? new Date(paid_at) : null, payload]
-        );
-        await client.query(
-          "UPDATE orders SET payment_status='paid', status='paid', paid_at = COALESCE($2, now()), updated_at = now() WHERE id = $1",
-          [order.id, paid_at ? new Date(paid_at) : null]
-        );
-
-        // Auto-deliver: assign an available stock item to each order item.
-        const oi = await client.query(
-          "SELECT id, product_id, quantity FROM order_items WHERE order_id = $1",
-          [order.id]
-        );
-        for (const item of oi.rows) {
-          const stock = await client.query(
-            `SELECT id FROM product_stocks
-              WHERE product_id = $1 AND status = 'available'
-              ORDER BY created_at ASC
-              LIMIT 1 FOR UPDATE SKIP LOCKED`,
-            [item.product_id]
-          );
-          if (stock.rows.length) {
-            const stockId = stock.rows[0].id;
-            await client.query(
-              "UPDATE product_stocks SET status='sold', sold_at=now() WHERE id = $1",
-              [stockId]
-            );
-            await client.query(
-              "UPDATE order_items SET delivered_stock_id = $2 WHERE id = $1",
-              [item.id, stockId]
-            );
-          }
-        }
-
-        await client.query(
-          "INSERT INTO deliveries (order_id, delivery_type, status) VALUES ($1, 'manual', 'delivered')",
-          [order.id]
-        );
-        await client.query(
-          "INSERT INTO audit_logs (action, entity_type, entity_id, metadata) VALUES ('payment.paid','order',$1,$2)",
-          [order.id, payload]
+    const result = await tx(async (client) => {
+      // Find target pending order: by ref, else by exact pending amount (newest first).
+      let o;
+      if (orderRef) {
+        o = await client.query("SELECT * FROM orders WHERE order_no = $1 FOR UPDATE", [orderRef]);
+      } else {
+        o = await client.query(
+          `SELECT o.* FROM orders o
+             JOIN payments p ON p.order_id = o.id
+            WHERE o.payment_status = 'pending' AND p.status = 'pending' AND p.amount = $1
+            ORDER BY o.created_at DESC
+            LIMIT 1 FOR UPDATE`,
+          [amount]
         );
       }
+      if (!o.rows.length) return { matched: false };
+      const order = o.rows[0];
+      if (order.payment_status === 'paid') return { matched: true, already: true, orderNo: order.order_no };
+
+      await client.query(
+        "UPDATE payments SET status='paid', paid_at=now(), raw_payload=$2 WHERE order_id=$1",
+        [order.id, payload]
+      );
+      await client.query(
+        "UPDATE orders SET payment_status='paid', status='paid', paid_at=now(), updated_at=now() WHERE id=$1",
+        [order.id]
+      );
+      await deliverOrder(client, order.id);
+      await client.query(
+        "INSERT INTO audit_logs (action, entity_type, entity_id, metadata) VALUES ('payment.paid','order',$1,$2)",
+        [order.id, payload]
+      );
+      return { matched: true, orderNo: order.order_no };
     });
-    res.json({ success: true });
+
+    if (!result.matched) {
+      return res.status(404).json({ success: false, message: 'Tidak ada order pending yang cocok.' });
+    }
+    res.json({ success: true, orderId: result.orderNo, already: !!result.already });
   } catch (e) {
-    console.error('[webhook myqris]', e);
+    console.error('[payhook]', e);
     res.status(500).json({ success: false });
   }
 });

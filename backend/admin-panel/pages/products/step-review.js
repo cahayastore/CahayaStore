@@ -1,6 +1,6 @@
-/* Step 5 — Review & submit */
+/* Step 4 — Review & submit */
 import { el, formatIDR } from '../../dom.js';
-import { PRODUCT_TYPES, STOCK_TYPES, parseStockItems } from './constants.js';
+import { PRODUCT_TYPES, STOCK_TYPES } from './constants.js';
 
 function lookup(arr, val) {
   return (arr.find(x => x.value === val) || {}).label || val || '—';
@@ -25,12 +25,7 @@ export function renderStepReview(ctx) {
   row('Harga', formatIDR(form.price));
   row('Status', form.is_active ? 'Aktif' : 'Nonaktif');
   if (!isEdit) {
-    const items = parseStockItems(form.stock_items_raw);
-    if (items.length) {
-      row('Stok Awal', items.length + ' item akan ditambahkan');
-    } else {
-      row('Stok Awal', '— (kosong, bisa diisi nanti)');
-    }
+    row('Stok', 'Diisi setelah produk dibuat (tombol "Stok" di daftar produk)');
   }
   if (form.description) row('Deskripsi', form.description);
 

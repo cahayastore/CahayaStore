@@ -5,16 +5,6 @@ import { buildChangePasswordCard } from './settings/change-password.js';
 
 const SECTIONS = [
   {
-    key: 'payment.myqris', secret: true, title: 'MyQRIS Payment',
-    note: 'Konfigurasi MyQRIS (disimpan terenkripsi).',
-    fields: [
-      { name: 'merchant_id', label: 'Merchant ID' },
-      { name: 'api_key', label: 'API Key', type: 'password' },
-      { name: 'webhook_secret', label: 'Webhook Secret', type: 'password' },
-      { name: 'qris_static', label: 'QRIS Statis (opsional)', type: 'textarea' }
-    ]
-  },
-  {
     key: 'telegram.bot', secret: true, title: 'Telegram Bot',
     note: 'Bot token & secret webhook (disimpan terenkripsi). Webhook URL: https://api.cahayastore.me/api/webhooks/telegram/main',
     fields: [

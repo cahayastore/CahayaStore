@@ -6,6 +6,7 @@ import { pageProducts } from './pages/products.js';
 import { pageCategories } from './pages/categories.js';
 import { pageOrders } from './pages/orders.js';
 import { pageBanners } from './pages/banners.js';
+import { pagePayment } from './pages/payment.js';
 import { pageSettings } from './pages/settings.js';
 
 const ROUTES = {
@@ -15,6 +16,7 @@ const ROUTES = {
   '#/categories': pageCategories,
   '#/orders': pageOrders,
   '#/banners': pageBanners,
+  '#/payment': pagePayment,
   '#/settings': pageSettings
 };
 

@@ -5,7 +5,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { el, alertBox, formatDate } from '../../dom.js';
 import { api } from '../../api.js';
-import { STOCK_INPUT_CONFIG, STOCK_CONTENT_MAP, parseStockItems } from './constants.js';
+import { STOCK_CONTENT_MAP, parseStockItems } from './constants.js';
 
 const STATUS_LABEL = {
   available: 'Tersedia',
@@ -87,24 +87,36 @@ function buildStockList(stocks, onDelete) {
 }
 
 function buildAddForm(product, onAdded, status) {
-  const cfg = STOCK_INPUT_CONFIG[product.stock_type] || STOCK_INPUT_CONFIG.manual;
-  const contentType = STOCK_CONTENT_MAP[product.stock_type];
+  // Always allow adding stock via a content-type selector, regardless of the
+  // product's configured stock_type. This decouples stock from the wizard.
+  const CONTENT_OPTIONS = [
+    { value: 'code', label: 'Kode / Voucher / Link', placeholder: 'ABCD-1234-EFGH\nhttps://drive.google.com/...' },
+    { value: 'credential', label: 'Akun (email:password)', placeholder: 'user1@example.com:passw0rd\nuser2@example.com:passw0rd:2fa' },
+    { value: 'note', label: 'Catatan / Teks', placeholder: 'Instruksi atau teks lain, satu baris = satu stok' },
+  ];
 
-  if (!contentType) {
-    return el('div', {
-      style: 'padding:12px 14px;background:var(--color-warning-soft);border:1px dashed color-mix(in srgb,var(--color-warning) 35%,transparent);border-radius:var(--mkd-radius-md);color:color-mix(in srgb,var(--color-warning) 80%,#000);font-size:var(--fs-sm)'
+  // Pick a sensible default based on the product stock_type.
+  const defaultType = STOCK_CONTENT_MAP[product.stock_type] || 'code';
+  let contentType = CONTENT_OPTIONS.some((o) => o.value === defaultType) ? defaultType : 'code';
+
+  const select = el('select', {
+    style: 'width:100%;padding:10px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--mkd-radius-md);color:var(--color-text-primary);margin-bottom:10px',
+    onchange: (e) => {
+      contentType = e.target.value;
+      const opt = CONTENT_OPTIONS.find((o) => o.value === contentType);
+      if (opt) textarea.placeholder = opt.placeholder;
     },
-      `Sumber stok produk ini ("${product.stock_type}") tidak mendukung bulk-add via wizard. Set ulang di "Edit Produk" → step Tipe untuk mengaktifkan input stok.`);
-  }
-  if (cfg.disabled) {
-    return el('div', {
-      style: 'padding:12px 14px;background:var(--color-warning-soft);border:1px dashed color-mix(in srgb,var(--color-warning) 35%,transparent);border-radius:var(--mkd-radius-md);color:color-mix(in srgb,var(--color-warning) 80%,#000);font-size:var(--fs-sm)'
-    }, '⚠️ Upload file akan tersedia di iterasi berikutnya.');
-  }
+  });
+  CONTENT_OPTIONS.forEach((o) => {
+    const opt = el('option', { value: o.value }, o.label);
+    if (o.value === contentType) opt.selected = true;
+    select.appendChild(opt);
+  });
 
+  const startPlaceholder = (CONTENT_OPTIONS.find((o) => o.value === contentType) || {}).placeholder || '';
   const textarea = el('textarea', {
     rows: '6',
-    placeholder: cfg.placeholder || '',
+    placeholder: startPlaceholder,
     style: 'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--fs-md);width:100%;padding:11px 13px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--mkd-radius-md);color:var(--color-text-primary)',
   });
 
@@ -143,7 +155,9 @@ function buildAddForm(product, onAdded, status) {
   });
 
   return el('div', {},
-    el('p', { class: 'hint', style: 'margin:0 0 8px;color:var(--color-text-muted);font-size:var(--fs-sm)' }, cfg.hint),
+    el('p', { class: 'hint', style: 'margin:0 0 8px;color:var(--color-text-muted);font-size:var(--fs-sm)' },
+      'Pilih jenis konten, lalu masukkan satu item per baris. Tiap baris = satu stok. URL otomatis dikirim sebagai link.'),
+    select,
     textarea,
     el('div', { style: 'display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px' },
       counter,

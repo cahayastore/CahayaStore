@@ -7,8 +7,7 @@ export const STEPS = [
   { num: 1, key: 'type',    label: 'Tipe' },
   { num: 2, key: 'info',    label: 'Info' },
   { num: 3, key: 'pricing', label: 'Harga' },
-  { num: 4, key: 'stock',   label: 'Stok' },
-  { num: 5, key: 'review',  label: 'Review' },
+  { num: 4, key: 'review',  label: 'Review' },
 ];
 
 /* Mapping stock_type (wizard) → content_type (DB product_stocks). */

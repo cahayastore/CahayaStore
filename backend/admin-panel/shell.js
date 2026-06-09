@@ -8,6 +8,7 @@ const NAV = [
   { hash: '/categories', label: 'Kategori', icon: '🏷️' },
   { hash: '/orders', label: 'Pesanan', icon: '🧾' },
   { hash: '/banners', label: 'Banner', icon: '🖼️' },
+  { hash: '/payment', label: 'Pembayaran', icon: '💳' },
   { hash: '/settings', label: 'Pengaturan', icon: '⚙️' }
 ];
 
