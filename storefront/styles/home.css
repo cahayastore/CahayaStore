@@ -20,7 +20,8 @@
 .category-card small { color: var(--muted); font-size: 11px; }
 
 /* ── Rail header (section heading) — menyatu dengan panel ── */
-.rail-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: -2px 0 14px; padding: 0 0 12px 12px; border: 0; border-left: 4px solid var(--accent); border-bottom: 1px solid var(--panel-line); border-radius: 0; background: transparent; box-shadow: none; }
+.rail-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: -20px -20px 14px; padding: 14px 20px; border: 0; border-bottom: 1px solid var(--panel-line); border-radius: var(--radius-md) var(--radius-md) 0 0; background: transparent; box-shadow: none; position: relative; }
+.rail-head::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); border-radius: var(--radius-md) 0 0 0; }
 .rail-head-left { display: flex; align-items: center; gap: 10px; }
 .rail-icon { width: 34px; height: 34px; border-radius: var(--radius-sm); display: grid; place-items: center; color: white; background: var(--primary); box-shadow: none; }
 .rail-eyebrow { font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--soft); }

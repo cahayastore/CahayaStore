@@ -35,6 +35,7 @@ export function buildImageUpload({ value = '', onChange, previewClass = '' }) {
     class: previewClass,
     style: 'width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--color-border,#e5e7eb);background:#f4f6f9'
       + (current ? '' : ';display:none'),
+    onerror: () => { preview.style.display = 'none'; },
   });
 
   const status = el('div', { class: 'hint', style: 'margin-top:6px' }, '');

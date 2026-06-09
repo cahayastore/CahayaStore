@@ -55,7 +55,12 @@ app.use('/api/admin', require('./src/routes/admin'));
 
 // Serve uploaded media from a persistent dir (survives deploys).
 const UPLOADS_DIR = process.env.UPLOADS_DIR || '/var/www/cahayastore/uploads';
-app.use('/uploads', express.static(UPLOADS_DIR, {
+app.use('/uploads', (req, res, next) => {
+  // Allow these images to be embedded cross-origin (storefront + admin hosts).
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+}, express.static(UPLOADS_DIR, {
   maxAge: '7d',
   immutable: true,
   fallthrough: true,
