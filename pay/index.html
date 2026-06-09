@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Detail Produk — Cahaya Store</title>
-  <meta name="description" content="Detail produk digital Cahaya Store." />
+  <title>Pembayaran — Cahaya Store</title>
+  <meta name="description" content="Pembayaran aman Cahaya Store." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&family=Exo:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles/cahaya-design-system.css?v=20260609-2" />
-  <link rel="stylesheet" href="/styles/product.css?v=20260609-1" />
+  <link rel="stylesheet" href="/styles/pay.css?v=20260609-1" />
   <script type="module" src="/scripts/cds-background.js?v=20260609-1"></script>
 </head>
 <body>
@@ -18,20 +18,12 @@
       <a class="brand" href="https://cahayastore.me/" aria-label="Cahaya Store">
         <img class="brand-full-logo" src="https://cahayastore.me/assets/logo-light.png?v=2" alt="Cahaya Store" />
       </a>
-      <a class="btn-back" href="https://cahayastore.me/">← Kembali ke Toko</a>
+      <a class="btn-back" href="https://cahayastore.me/">← Ke Toko</a>
     </div>
   </header>
 
-  <main class="container pd-main">
-    <nav class="pd-crumb" aria-label="Breadcrumb">
-      <a href="https://cahayastore.me/">Beranda</a>
-      <span>/</span>
-      <span data-crumb-cat>Produk</span>
-    </nav>
-
-    <div class="pd-grid" data-detail>
-      <div class="pd-skeleton">Memuat produk…</div>
-    </div>
+  <main class="container pay-main" data-pay>
+    <div class="pay-skeleton">Memuat…</div>
   </main>
 
   <footer class="pd-footer">
@@ -41,6 +33,6 @@
     </div>
   </footer>
 
-  <script type="module" src="/scripts/product.js?v=20260609-1"></script>
+  <script type="module" src="/scripts/pay.js?v=20260609-1"></script>
 </body>
 </html>

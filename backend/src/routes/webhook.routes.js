@@ -49,8 +49,35 @@ router.post('/myqris', async (req, res) => {
           "UPDATE orders SET payment_status='paid', status='paid', paid_at = COALESCE($2, now()), updated_at = now() WHERE id = $1",
           [order.id, paid_at ? new Date(paid_at) : null]
         );
+
+        // Auto-deliver: assign an available stock item to each order item.
+        const oi = await client.query(
+          "SELECT id, product_id, quantity FROM order_items WHERE order_id = $1",
+          [order.id]
+        );
+        for (const item of oi.rows) {
+          const stock = await client.query(
+            `SELECT id FROM product_stocks
+              WHERE product_id = $1 AND status = 'available'
+              ORDER BY created_at ASC
+              LIMIT 1 FOR UPDATE SKIP LOCKED`,
+            [item.product_id]
+          );
+          if (stock.rows.length) {
+            const stockId = stock.rows[0].id;
+            await client.query(
+              "UPDATE product_stocks SET status='sold', sold_at=now() WHERE id = $1",
+              [stockId]
+            );
+            await client.query(
+              "UPDATE order_items SET delivered_stock_id = $2 WHERE id = $1",
+              [item.id, stockId]
+            );
+          }
+        }
+
         await client.query(
-          "INSERT INTO deliveries (order_id, delivery_type, status) VALUES ($1, 'manual', 'pending')",
+          "INSERT INTO deliveries (order_id, delivery_type, status) VALUES ($1, 'manual', 'delivered')",
           [order.id]
         );
         await client.query(
