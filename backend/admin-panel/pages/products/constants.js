@@ -91,6 +91,8 @@ export function createDefaultForm() {
     description: '',
     category_id: '',
     price: 0,
+    original_price: 0,
+    image_url: '',
     is_active: true,
     // Stock items (raw textarea — di-parse pada submit)
     stock_items_raw: '',
@@ -107,6 +109,8 @@ export function createFormFromProduct(p) {
     description: p.description || '',
     category_id: p.category_id || '',
     price: Number(p.price) || 0,
+    original_price: Number(p.original_price) || 0,
+    image_url: p.image_url || '',
     is_active: p.is_active !== false,
     stock_items_raw: '', // edit mode tidak otomatis tambah stok lewat wizard
   };
@@ -122,6 +126,8 @@ export function parseStockItems(raw) {
 
 /* Build payload yang dikirim ke API */
 export function buildSubmission(form) {
+  const price = Math.max(0, Math.round(Number(form.price) || 0));
+  const original = Math.max(0, Math.round(Number(form.original_price) || 0));
   return {
     product_type: form.product_type,
     stock_type: form.stock_type,
@@ -129,7 +135,10 @@ export function buildSubmission(form) {
     slug: (form.slug || '').trim(),
     description: (form.description || '').trim() || null,
     category_id: form.category_id || null,
-    price: Math.max(0, Math.round(Number(form.price) || 0)),
+    price,
+    // original_price hanya bermakna kalau lebih besar dari harga jual (diskon)
+    original_price: original > price ? original : null,
+    image_url: (form.image_url || '').trim() || null,
     is_active: !!form.is_active,
   };
 }

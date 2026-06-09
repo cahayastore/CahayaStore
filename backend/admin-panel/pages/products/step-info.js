@@ -37,6 +37,24 @@ export function renderStepInfo(ctx) {
     oninput: (e) => setField('description', e.target.value)
   }, form.description || '');
 
+  const imgPreview = el('img', {
+    src: form.image_url || '',
+    alt: '',
+    style: 'width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--color-border);background:var(--color-surface-soft)' + (form.image_url ? '' : ';display:none')
+  });
+  const imgInput = el('input', {
+    name: 'image_url',
+    type: 'url',
+    value: form.image_url || '',
+    placeholder: 'https://.../produk.jpg',
+    oninput: (e) => {
+      const v = e.target.value.trim();
+      setField('image_url', v);
+      if (v) { imgPreview.src = v; imgPreview.style.display = ''; }
+      else { imgPreview.style.display = 'none'; }
+    }
+  });
+
   const catSelect = el('select', {
     name: 'category_id',
     onchange: (e) => setField('category_id', e.target.value)
@@ -66,6 +84,10 @@ export function renderStepInfo(ctx) {
       el('div', { class: 'hint', style: 'margin-top:4px' },
         'Otomatis dibuat dari nama, bisa disesuaikan.')),
     el('div', { class: 'field' }, el('label', {}, 'Kategori'), catSelect),
+    el('div', { class: 'field' }, el('label', {}, 'Gambar Produk (URL)'), imgInput,
+      el('div', { class: 'hint', style: 'margin-top:4px' },
+        'URL gambar yang tampil di card storefront. Kosongkan untuk pakai inisial.'),
+      el('div', { style: 'margin-top:10px' }, imgPreview)),
     el('div', { class: 'field' }, el('label', {}, 'Deskripsi'), descInput)
   );
 }
