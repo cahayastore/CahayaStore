@@ -1,0 +1,38 @@
+/* CDS — Back-compat aliases
+   Maps legacy variable names (used by layout.css/home.css/product.css)
+   to the new --cds-* tokens. Keep until those files are migrated. */
+:root {
+  --bg: var(--cds-bg);
+  --bg-soft: var(--cds-surface-soft);
+  --panel: var(--cds-surface);
+  --panel-strong: var(--cds-surface);
+  --panel-line: var(--cds-border);
+  --text: var(--cds-text);
+  --muted: var(--cds-text-muted);
+  --soft: var(--cds-text-secondary);
+  --primary: var(--cds-primary);
+  --primary-2: var(--cds-primary-hover);
+  --primary-dark: var(--cds-primary-dark);
+  --primary-active: var(--cds-primary-active);
+  --primary-soft: var(--cds-primary-soft);
+  --primary-tint: var(--cds-primary-tint);
+  --light-surface: var(--cds-surface-soft);
+  --accent: var(--cds-accent);
+  --green: var(--cds-success);
+  --gold: var(--cds-accent);
+  --danger: var(--cds-danger);
+  --radius-xs: var(--cds-radius-xs);
+  --radius-sm: var(--cds-radius-sm);
+  --radius-md: var(--cds-radius-md);
+  --radius-lg: var(--cds-radius-md);
+  --radius-pill: var(--cds-radius-pill);
+  --shadow-1: var(--cds-shadow-1);
+  --shadow-2: var(--cds-shadow-2);
+  --shadow-3: var(--cds-shadow-3);
+  --shadow-soft: var(--cds-shadow-1);
+  --shadow-card: var(--cds-shadow-1);
+  --max: var(--cds-max);
+  --font: var(--cds-font);
+  --display: var(--cds-font-display);
+  --font-ui: var(--cds-font-ui);
+}

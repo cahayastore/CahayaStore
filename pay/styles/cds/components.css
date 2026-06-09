@@ -1,0 +1,18 @@
+/* CDS — Buttons & small interactive primitives */
+.btn {
+  border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--cds-font-display); font-weight: 700; font-size: 16px; line-height: 24px;
+  min-height: 37px; padding: 8px 16px; border-radius: var(--cds-radius-md);
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.btn-primary { color: #fff; background: var(--cds-primary); }
+.btn-primary:hover { background: var(--cds-primary-dark); }
+.btn-primary:active { background: var(--cds-primary-active); }
+.btn-ghost { color: var(--cds-primary); background: transparent; }
+.btn-ghost:hover { color: var(--cds-primary-dark); background: var(--cds-primary-soft); }
+.icon-pill {
+  width: 40px; height: 40px; border-radius: var(--cds-radius-pill);
+  display: grid; place-items: center; background: #fff;
+  border: 1px solid var(--cds-border); box-shadow: var(--cds-shadow-2);
+}
