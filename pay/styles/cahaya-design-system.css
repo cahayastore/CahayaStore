@@ -1,0 +1,188 @@
+/* ============================================================
+   Cahaya Design System (CDS)
+   Single source of truth for Cahaya Store UI — tokens, base,
+   primitives, and the global animated "background paths".
+   Inspired by itemku palette. Mirror of Marketku's design-system
+   approach: import this one file everywhere.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* ── Brand / Primary ─────────────────────────── */
+  --cds-primary: #307fe2;
+  --cds-primary-hover: #2c77d2;
+  --cds-primary-dark: #215ea9;
+  --cds-primary-active: #1a4a8f;
+  --cds-primary-soft: #eaf2fc;
+  --cds-primary-tint: #cbdff8;
+
+  /* ── Accent ──────────────────────────────────── */
+  --cds-accent: #f46200;
+  --cds-accent-soft: #fff1e6;
+
+  /* ── Neutrals / Text ─────────────────────────── */
+  --cds-text: #000000;
+  --cds-text-secondary: #474747;
+  --cds-text-muted: #909090;
+  --cds-border: #e5e7eb;
+  --cds-border-strong: #d7dbe0;
+
+  /* ── Surfaces ────────────────────────────────── */
+  --cds-bg: #f4f6f9;
+  --cds-surface: #ffffff;
+  --cds-surface-soft: #eaf2fc;
+
+  /* ── Status ──────────────────────────────────── */
+  --cds-success: #16a34a;
+  --cds-warning: #f59e0b;
+  --cds-danger: #e42b2b;
+
+  /* ── Radius scale ────────────────────────────── */
+  --cds-radius-xs: 3px;
+  --cds-radius-sm: 4px;
+  --cds-radius-md: 8px;
+  --cds-radius-pill: 9999px;
+
+  /* ── Elevation (3-level) ─────────────────────── */
+  --cds-shadow-1: rgba(0, 0, 0, 0.1) 0px 2px 4px 0px, rgba(0, 0, 0, 0.05) 0px 6px 16px 0px;
+  --cds-shadow-2: rgba(34, 34, 34, 0.04) 0px 3px 3px -2px, rgba(34, 34, 34, 0.14) 0px 4px 12px 0px, rgba(34, 34, 34, 0.04) 0px 4px 8px 2px;
+  --cds-shadow-3: 0px 20px 25px -5px rgba(0, 0, 0, 0.15), 0px 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* ── Typography ──────────────────────────────── */
+  --cds-font: 'Exo 2', 'Exo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --cds-font-display: 'Exo 2', 'Exo', system-ui, sans-serif;
+  --cds-font-ui: 'Helvetica', Arial, sans-serif;
+
+  /* ── Layout ──────────────────────────────────── */
+  --cds-max: 1200px;
+
+  /* ── Background paths palette ────────────────── */
+  --cds-bg-base-1: #f4f8ff;
+  --cds-bg-base-2: #eaf2fc;
+  --cds-bg-path: rgba(48, 127, 226, 0.10);
+  --cds-bg-path-accent: rgba(244, 98, 0, 0.07);
+
+  /* ── Back-compat aliases (legacy var names) ──── */
+  --bg: var(--cds-bg);
+  --bg-soft: var(--cds-surface-soft);
+  --panel: var(--cds-surface);
+  --panel-strong: var(--cds-surface);
+  --panel-line: var(--cds-border);
+  --text: var(--cds-text);
+  --muted: var(--cds-text-muted);
+  --soft: var(--cds-text-secondary);
+  --primary: var(--cds-primary);
+  --primary-2: var(--cds-primary-hover);
+  --primary-dark: var(--cds-primary-dark);
+  --primary-active: var(--cds-primary-active);
+  --primary-soft: var(--cds-primary-soft);
+  --primary-tint: var(--cds-primary-tint);
+  --light-surface: var(--cds-surface-soft);
+  --accent: var(--cds-accent);
+  --green: var(--cds-success);
+  --gold: var(--cds-accent);
+  --danger: var(--cds-danger);
+  --radius-xs: var(--cds-radius-xs);
+  --radius-sm: var(--cds-radius-sm);
+  --radius-md: var(--cds-radius-md);
+  --radius-lg: var(--cds-radius-md);
+  --radius-pill: var(--cds-radius-pill);
+  --shadow-1: var(--cds-shadow-1);
+  --shadow-2: var(--cds-shadow-2);
+  --shadow-3: var(--cds-shadow-3);
+  --shadow-soft: var(--cds-shadow-1);
+  --shadow-card: var(--cds-shadow-1);
+  --max: var(--cds-max);
+  --font: var(--cds-font);
+  --display: var(--cds-font-display);
+  --font-ui: var(--cds-font-ui);
+}
+
+/* ── Base reset ──────────────────────────────────── */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  position: relative;
+  color: var(--cds-text);
+  font-family: var(--cds-font);
+  font-size: 16px;
+  line-height: 24px;
+  background: var(--cds-bg);
+}
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+img { max-width: 100%; display: block; }
+
+/* ── Layout primitives ───────────────────────────── */
+.container { width: min(var(--cds-max), calc(100% - 96px)); margin: 0 auto; }
+.gradient-text { color: var(--cds-primary); }
+.section-title { margin: 0 0 18px; font: 700 24px/36px var(--cds-font-display); text-align: center; }
+.panel {
+  border: 1px solid var(--cds-border);
+  background: var(--cds-surface);
+  border-radius: var(--cds-radius-md);
+  box-shadow: var(--cds-shadow-1);
+}
+
+/* ── Buttons ─────────────────────────────────────── */
+.btn {
+  border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--cds-font-display); font-weight: 700; font-size: 16px; line-height: 24px;
+  min-height: 37px; padding: 8px 16px; border-radius: var(--cds-radius-md);
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.btn-primary { color: #fff; background: var(--cds-primary); }
+.btn-primary:hover { background: var(--cds-primary-dark); }
+.btn-primary:active { background: var(--cds-primary-active); }
+.btn-ghost { color: var(--cds-primary); background: transparent; }
+.btn-ghost:hover { color: var(--cds-primary-dark); background: var(--cds-primary-soft); }
+.icon-pill {
+  width: 40px; height: 40px; border-radius: var(--cds-radius-pill);
+  display: grid; place-items: center; background: #fff;
+  border: 1px solid var(--cds-border); box-shadow: var(--cds-shadow-2);
+}
+[hidden] { display: none !important; }
+
+/* ── Global animated background paths ────────────── */
+.cds-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 15% 12%, rgba(48,127,226,.10), transparent 30rem),
+    radial-gradient(circle at 85% 18%, rgba(244,98,0,.06), transparent 26rem),
+    linear-gradient(180deg, var(--cds-bg-base-1) 0%, var(--cds-bg-base-2) 55%, var(--cds-bg-base-1) 100%);
+}
+.cds-bg svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cds-bg path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: var(--len, 2000);
+  stroke-dashoffset: var(--len, 2000);
+  animation: cdsDraw var(--dur, 14s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes cdsDraw {
+  0%   { stroke-dashoffset: var(--len, 2000); opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { stroke-dashoffset: 0; opacity: 1; }
+  90%  { opacity: 1; }
+  100% { stroke-dashoffset: calc(var(--len, 2000) * -1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cds-bg path { animation: none; stroke-dashoffset: 0; opacity: .5; }
+}
+
+@media (max-width: 1023px) {
+  .container { width: min(100% - 48px, 1000px); }
+}
+@media (max-width: 760px) {
+  .container { width: calc(100% - 32px); }
+  body { padding-bottom: 88px; }
+}
