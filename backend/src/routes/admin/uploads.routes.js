@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const sharp = require('sharp');
+const jsQR = require('jsqr');
 const { requireAuth } = require('../../auth.middleware');
 
 const router = express.Router();
@@ -69,6 +70,53 @@ router.post('/uploads', requireAuth(['owner', 'admin']), (req, res) => {
     } catch (e) {
       console.error('[uploads]', e);
       res.status(422).json({ success: false, message: 'Gagal memproses gambar.' });
+    }
+  });
+});
+
+// POST /api/admin/uploads/decode-qris  (multipart, field: "file")
+// Reads a QR image and returns the embedded EMV/QRIS string.
+const decodeUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED.has(file.mimetype)) return cb(null, true);
+    cb(new Error('Tipe file tidak didukung. Unggah foto/PNG QRIS.'));
+  },
+});
+
+router.post('/uploads/decode-qris', requireAuth(['owner', 'admin']), (req, res) => {
+  decodeUpload.single('file')(req, res, async (err) => {
+    if (err) {
+      const code = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      return res.status(code).json({ success: false, message: err.message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'File QRIS wajib diunggah.' });
+    }
+    try {
+      // Normalize: upscale a bit + grayscale-friendly raw RGBA for the QR reader.
+      const MAX = 1000;
+      const { data, info } = await sharp(req.file.buffer)
+        .rotate()
+        .resize({ width: MAX, height: MAX, fit: 'inside', withoutEnlargement: true })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+      const result = jsQR(new Uint8ClampedArray(data.buffer), info.width, info.height);
+      if (!result || !result.data) {
+        return res.status(422).json({ success: false, message: 'QR tidak terbaca. Pakai foto yang jelas & tegak lurus.' });
+      }
+      const qris = String(result.data).trim();
+      // Basic sanity: EMV QRIS starts with "0002" payload format indicator.
+      if (!/^00\d{2}/.test(qris)) {
+        return res.status(422).json({ success: false, message: 'QR terbaca tapi bukan format QRIS yang valid.', raw: qris });
+      }
+      res.json({ success: true, qris });
+    } catch (e) {
+      console.error('[decode-qris]', e);
+      res.status(422).json({ success: false, message: 'Gagal membaca gambar QRIS.' });
     }
   });
 });

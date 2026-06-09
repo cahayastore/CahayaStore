@@ -1,6 +1,6 @@
 /* Admin page: Pembayaran (MyQRIS + PayHook) */
 import { el, alertBox } from '../dom.js';
-import { api } from '../api.js';
+import { api, API_BASE, session } from '../api.js';
 import { shell } from '../shell.js';
 
 const KEY = 'payment.myqris';
@@ -23,6 +23,40 @@ export async function pagePayment() {
   const webhookToken = el('input', { name: 'webhook_token', type: 'text', placeholder: 'token rahasia untuk PayHook' });
   const uniqueMax = el('input', { name: 'unique_max', type: 'number', min: '1', max: '200', value: '50' });
 
+  // Upload QRIS image → auto-decode to EMV string into the textarea.
+  const decodeStatus = el('div', { class: 'hint', style: 'margin-top:6px' }, '');
+  const qrisFile = el('input', {
+    type: 'file', accept: 'image/*', style: 'display:none',
+    onchange: async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      decodeStatus.textContent = 'Membaca QRIS…';
+      uploadBtn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch(API_BASE + '/api/admin/uploads/decode-qris', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.getToken()}` },
+          body: fd,
+        });
+        const body = await res.json().catch(() => null);
+        if (res.status === 401) { session.clear(); location.hash = '#/login'; return; }
+        if (!res.ok || !body?.qris) throw new Error((body && body.message) || `Gagal (HTTP ${res.status})`);
+        qrisStatic.value = body.qris;
+        decodeStatus.textContent = '✓ QRIS terbaca & dimasukkan otomatis. Jangan lupa Simpan.';
+        decodeStatus.style.color = 'var(--color-success)';
+      } catch (err) {
+        decodeStatus.textContent = err.message;
+        decodeStatus.style.color = 'var(--color-danger)';
+      } finally {
+        uploadBtn.disabled = false;
+        e.target.value = '';
+      }
+    },
+  });
+  const uploadBtn = el('button', { class: 'btn ghost small', type: 'button', onclick: () => qrisFile.click() }, '📷 Upload Gambar QRIS');
+
   // Load existing
   api('/api/admin/settings/' + KEY).then((r) => {
     const v = r.value || {};
@@ -32,9 +66,16 @@ export async function pagePayment() {
     if (v.unique_max) uniqueMax.value = v.unique_max;
   }).catch(() => { /* unset is fine */ });
 
+  const qrisField = el('div', { class: 'field' },
+    el('label', {}, 'QRIS Statis (EMV)'),
+    el('div', { style: 'margin-bottom:8px' }, uploadBtn, qrisFile, decodeStatus),
+    qrisStatic,
+    el('div', { class: 'hint', style: 'margin-top:4px' }, 'Upload gambar QRIS untuk konversi otomatis ke string, atau tempel manual. Sistem mengubahnya jadi QRIS dinamis sesuai nominal.')
+  );
+
   const form = el('form', {},
     field('Nama Merchant', merchantName, 'Tampil pada referensi pembayaran.'),
-    field('QRIS Statis (EMV)', qrisStatic, 'Tempel string QRIS statis dari merchant. Sistem mengubahnya jadi QRIS dinamis sesuai nominal otomatis.'),
+    qrisField,
     field('PayHook Token', webhookToken, 'Token rahasia yang dikirim aplikasi PayHook saat verifikasi pembayaran.'),
     field('Maks Nominal Unik (Rp)', uniqueMax, 'Selisih rupiah unik untuk membedakan order bersamaan (default 50).'),
     el('button', { class: 'btn primary', type: 'submit' }, 'Simpan Konfigurasi'),
