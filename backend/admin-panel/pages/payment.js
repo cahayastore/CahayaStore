@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import { shell } from '../shell.js';
 
 const KEY = 'payment.myqris';
-const WEBHOOK_URL = 'https://api.cahayastore.me/api/webhooks/myqris';
+const WEBHOOK_URL = 'https://api.cahayastore.me/api/payment-gateways/webhook/payhook';
 
 function field(label, node, hint) {
   return el('div', { class: 'field' },
@@ -74,8 +74,8 @@ export async function pagePayment() {
       el('li', {}, 'Set URL webhook PayHook ke:'),
       el('li', { style: 'list-style:none;margin:6px 0' },
         el('code', { style: 'display:block;padding:10px 12px;background:var(--color-surface-soft);border:1px solid var(--color-border);border-radius:8px;word-break:break-all' }, WEBHOOK_URL)),
-      el('li', {}, 'Sertakan field token sama dengan "PayHook Token" di atas (header X-PayHook-Token atau body token).'),
-      el('li', {}, 'PayHook mengirim nominal pembayaran; sistem mencocokkan dengan order pending lalu mengirim produk otomatis.')
+      el('li', {}, 'Auth: pilih Bearer Token, atau header X-API-Key / x-payhook-token — isi dengan "PayHook Token" di atas.'),
+      el('li', {}, 'PayHook mengirim nominal pembayaran (JSON); sistem mencocokkan order pending berdasarkan nominal unik lalu mengirim produk otomatis.')
     )
   );
 

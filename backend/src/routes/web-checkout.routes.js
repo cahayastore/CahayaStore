@@ -9,7 +9,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { query, tx } = require('../db');
-const { createInvoice, getUniqueMax } = require('../payment/myqris.service');
+const { createInvoice, getUniqueMax, verifyPayhookToken } = require('../payment/myqris.service');
 const { decryptString } = require('../crypto');
 
 const router = express.Router();
@@ -19,6 +19,40 @@ function genOrderNo() {
 }
 function genToken() {
   return crypto.randomBytes(24).toString('hex');
+}
+
+/* Extract PayHook auth token (Bearer / X-API-Key / x-payhook-token / ?token). */
+function extractWebhookToken(req) {
+  const auth = String(req.headers.authorization || '').trim();
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (m) return m[1].trim();
+  return String(req.headers['x-api-key'] || req.headers['x-payhook-token'] || req.query.token || '').trim();
+}
+
+/* Parse a rupiah amount from a PayHook payload (compact JSON or notification text). */
+function parsePayhookAmount(p = {}) {
+  const direct = p.amount ?? p.amountDetected ?? p.nominal ?? p.total ?? p.jumlah;
+  if (direct != null && Number(direct) > 0) return Math.round(Number(direct));
+  const text = String(p.notification_text || p.text || p.bigText || p.notificationText || '');
+  const m = text.replace(/[.,](?=\d{3}\b)/g, '').match(/(?:rp\s*)?(\d{3,})/i);
+  return m ? Math.round(Number(m[1])) : 0;
+}
+
+/* Deliver stock for a paid order (assign one available item per order item). */
+async function deliverOrder(client, orderId) {
+  const oi = await client.query("SELECT id, product_id FROM order_items WHERE order_id = $1", [orderId]);
+  for (const item of oi.rows) {
+    const stock = await client.query(
+      `SELECT id FROM product_stocks WHERE product_id = $1 AND status = 'available'
+        ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`,
+      [item.product_id]
+    );
+    if (stock.rows.length) {
+      await client.query("UPDATE product_stocks SET status='sold', sold_at=now() WHERE id = $1", [stock.rows[0].id]);
+      await client.query("UPDATE order_items SET delivered_stock_id = $2 WHERE id = $1", [item.id, stock.rows[0].id]);
+    }
+  }
+  await client.query("INSERT INTO deliveries (order_id, delivery_type, status) VALUES ($1,'manual','delivered')", [orderId]);
 }
 
 /* POST /api/public/web-checkout */
@@ -195,5 +229,68 @@ router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
     },
   });
 });
+
+/* ── PayHook webhook (Marketku-compatible) ────────────────────────────
+   POST /api/payment-gateways/webhook/payhook
+   Auth: Bearer <token> | X-API-Key | x-payhook-token | ?token=
+   Body (compact JSON): { amount|nominal|total, source, reference, notification_text, ... }
+   Matches a pending order by exact amount, marks paid, delivers product. */
+async function payhookHandler(req, res) {
+  const token = extractWebhookToken(req);
+  let verify;
+  try { verify = await verifyPayhookToken(token); }
+  catch (e) { return res.status(503).json({ status: 'error', message: e.message }); }
+  if (!verify.ok) return res.status(401).json({ error: 'Unauthorized' });
+
+  const payload = req.body || {};
+  if (payload.test === true || payload.type === 'test' || payload.event === 'test') {
+    return res.json({ status: 'ok', message: 'PayHook webhook aktif' });
+  }
+
+  const explicitRef = payload.order_ref || payload.order_no || payload.reference || null;
+  const amount = parsePayhookAmount(payload);
+  if (!explicitRef && !(amount > 0)) {
+    return res.json({ status: 'no_match', reason: 'no_amount' });
+  }
+
+  try {
+    const result = await tx(async (client) => {
+      let o;
+      if (explicitRef && /^CS-/i.test(String(explicitRef))) {
+        o = await client.query("SELECT * FROM orders WHERE order_no = $1 FOR UPDATE", [explicitRef]);
+      }
+      if (!o || !o.rows.length) {
+        // Amount-only match: exactly one pending order with this amount.
+        const m = await client.query(
+          `SELECT o.* FROM orders o JOIN payments p ON p.order_id = o.id
+            WHERE o.payment_status='pending' AND p.status='pending' AND p.amount=$1
+            ORDER BY o.created_at DESC`,
+          [amount]
+        );
+        if (m.rows.length > 1) return { reason: 'ambiguous', count: m.rows.length };
+        o = m;
+      }
+      if (!o.rows.length) return { reason: 'no_match' };
+      const order = o.rows[0];
+      if (order.payment_status === 'paid') return { matched: true, already: true, orderNo: order.order_no };
+
+      await client.query("UPDATE payments SET status='paid', paid_at=now(), raw_payload=$2 WHERE order_id=$1", [order.id, payload]);
+      await client.query("UPDATE orders SET payment_status='paid', status='paid', paid_at=now(), updated_at=now() WHERE id=$1", [order.id]);
+      await deliverOrder(client, order.id);
+      await client.query("INSERT INTO audit_logs (action, entity_type, entity_id, metadata) VALUES ('payment.paid','order',$1,$2)", [order.id, payload]);
+      return { matched: true, orderNo: order.order_no };
+    });
+
+    if (result.reason === 'ambiguous') return res.json({ status: 'ambiguous', matching_count: result.count });
+    if (!result.matched) return res.json({ status: 'no_match', reason: result.reason || 'no_match' });
+    return res.json({ status: 'confirmed', invoice_number: result.orderNo, already: !!result.already });
+  } catch (e) {
+    console.error('[payhook]', e);
+    res.status(500).json({ error: 'Internal error' });
+  }
+}
+
+router.post('/payment-gateways/webhook/payhook', payhookHandler);
+router.post('/payment-gateways/webhook/myqris/payhook', payhookHandler);
 
 module.exports = router;
