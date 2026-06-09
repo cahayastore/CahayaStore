@@ -6,8 +6,8 @@ export function pageLogin() {
   errBox.style.display = 'none';
 
   const form = el('form', { class: 'login-card' },
-    el('h1', {}, 'Cahaya Store'),
-    el('p', { class: 'sub' }, 'Masuk ke admin panel'),
+    el('img', { src: '/admin/assets/logo.png', alt: 'Cahaya Store', style: 'height:56px;width:auto;object-fit:contain;margin:0 auto 14px;display:block' }),
+    el('p', { class: 'sub', style: 'text-align:center' }, 'Masuk ke admin panel'),
     errBox,
     el('div', { class: 'field' },
       el('label', {}, 'Email'),

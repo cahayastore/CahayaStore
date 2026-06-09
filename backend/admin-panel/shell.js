@@ -36,8 +36,7 @@ function logoutButton() {
 function buildSidebar(currentHash, user) {
   return el('aside', { class: 'sidebar' },
     el('div', { class: 'brand' },
-      el('span', { class: 'logo' }, '⚡'),
-      el('span', {}, 'Cahaya Store')
+      el('img', { class: 'brand-logo-img', src: '/admin/assets/logo.png', alt: 'Cahaya Store' })
     ),
     el('nav', {}, ...NAV.map(n => navLink(n, currentHash))),
     el('div', { class: 'spacer' }),
