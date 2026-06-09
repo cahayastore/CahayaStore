@@ -1,8 +1,24 @@
 'use strict';
 const express = require('express');
 const { query } = require('../db');
+const { getSetting, KEYS } = require('../settings.service');
 
 const router = express.Router();
+
+router.get('/banners', async (_req, res) => {
+  const value = await getSetting(KEYS.STORE_BANNERS);
+  const items = Array.isArray(value?.items) ? value.items : [];
+  const banners = items
+    .filter((b) => b && b.active !== false && b.image_url)
+    .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    .map((b) => ({
+      id: String(b.id || ''),
+      image_url: String(b.image_url),
+      link: b.link ? String(b.link) : null,
+      alt: b.alt ? String(b.alt) : ''
+    }));
+  res.json({ success: true, data: banners });
+});
 
 router.get('/categories', async (_req, res) => {
   const r = await query(

@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Sora:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles/tokens.css?v=20260605-navcompact" />
   <link rel="stylesheet" href="/styles/layout.css?v=20260605-navcompact" />
-  <link rel="stylesheet" href="/styles/home.css?v=20260605-real" />
+  <link rel="stylesheet" href="/styles/home.css?v=20260609-banner" />
 </head>
 <body>
   <header class="mk-header">
@@ -36,28 +36,11 @@
   </header>
 
   <main id="home">
-    <section class="hero container">
-      <div class="hero-card panel">
-        <div class="hero-copy">
-          <div class="eyebrow">Katalog real-time</div>
-          <h1>Belanja produk digital dari <span class="gradient-text">Cahaya Store</span></h1>
-          <p>Produk di halaman ini terhubung langsung ke database. Tidak ada katalog dummy — stok, harga, dan produk mengikuti data terbaru dari admin panel.</p>
-          <div class="hero-stats" aria-label="Ringkasan katalog">
-            <div><strong data-product-count>0</strong><span>Produk aktif</span></div>
-            <div><strong data-category-count>0</strong><span>Kategori</span></div>
-            <div><strong>24/7</strong><span>Support order</span></div>
-          </div>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="#products">Lihat Produk</a>
-            <a class="btn btn-ghost" href="https://pay.cahayastore.me">Cek Pesanan</a>
-          </div>
-        </div>
-        <div class="hero-visual" aria-hidden="true">
-          <div class="catalog-preview" data-featured-preview>
-            <div class="preview-card is-loading"><span></span><b>Memuat katalog...</b><small>Real-time dari database</small></div>
-          </div>
-        </div>
+    <section class="banner-section container" aria-label="Banner promosi">
+      <div class="banner-carousel" data-banners>
+        <div class="banner-slide banner-slide--loading" aria-hidden="true"></div>
       </div>
+      <div class="banner-dots" data-banner-dots></div>
     </section>
 
     <section class="category-strip panel container" id="categories">
@@ -96,6 +79,7 @@
   </footer>
 
   <nav class="mobile-nav" aria-label="Navigasi mobile"><a class="active" href="#home"><strong>⌂</strong>Beranda</a><a href="#categories"><strong>▦</strong>Kategori</a><a href="#products"><strong>▣</strong>Produk</a><a href="#how"><strong>?</strong>Cara</a><a href="https://admin.cahayastore.me/admin/"><strong>♙</strong>Akun</a></nav>
+  <script type="module" src="/scripts/banner.js?v=20260609-banner"></script>
   <script type="module" src="/scripts/catalog.js?v=20260605-real"></script>
 </body>
 </html>

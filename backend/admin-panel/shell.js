@@ -7,6 +7,7 @@ const NAV = [
   { hash: '/products', label: 'Produk', icon: '📦' },
   { hash: '/categories', label: 'Kategori', icon: '🏷️' },
   { hash: '/orders', label: 'Pesanan', icon: '🧾' },
+  { hash: '/banners', label: 'Banner', icon: '🖼️' },
   { hash: '/settings', label: 'Pengaturan', icon: '⚙️' }
 ];
 

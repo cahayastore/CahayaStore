@@ -316,3 +316,45 @@ button { cursor: pointer; }
   .main-content { padding: 16px; }
   .page-head h1 { font-size: 20px; }
 }
+
+/* ── Banner manager ───────────────────────────────────── */
+.page-head-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.banner-list { display: flex; flex-direction: column; gap: 14px; }
+.banner-item {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--mkd-radius-lg);
+  background: var(--color-surface-soft);
+}
+.banner-thumb {
+  width: 200px; height: 96px;
+  object-fit: cover;
+  border-radius: var(--mkd-radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.banner-thumb--empty {
+  display: grid; place-items: center;
+  color: var(--color-text-subtle);
+  font-size: var(--fs-sm);
+}
+.banner-fields { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.banner-fields .field { margin-bottom: 10px; }
+.banner-controls {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.banner-controls .check {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-lg); color: var(--color-text-secondary); font-weight: 600;
+}
+.banner-controls .check input { width: auto; }
+.banner-actions { display: flex; gap: 6px; }
+
+@media (max-width: 820px) {
+  .banner-item { grid-template-columns: 1fr; }
+  .banner-thumb { width: 100%; }
+}

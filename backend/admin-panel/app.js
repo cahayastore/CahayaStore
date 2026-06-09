@@ -5,6 +5,7 @@ import { pageDashboard } from './pages/dashboard.js';
 import { pageProducts } from './pages/products.js';
 import { pageCategories } from './pages/categories.js';
 import { pageOrders } from './pages/orders.js';
+import { pageBanners } from './pages/banners.js';
 import { pageSettings } from './pages/settings.js';
 
 const ROUTES = {
@@ -13,6 +14,7 @@ const ROUTES = {
   '#/products': pageProducts,
   '#/categories': pageCategories,
   '#/orders': pageOrders,
+  '#/banners': pageBanners,
   '#/settings': pageSettings
 };
 

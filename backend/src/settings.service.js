@@ -6,7 +6,8 @@ const { encryptJson, decryptJson } = require('./crypto');
 const KEYS = {
   MYQRIS: 'payment.myqris',           // { merchant_id, api_key, webhook_secret, qris_static }
   TELEGRAM_BOT: 'telegram.bot',       // { token, username, webhook_secret }
-  STORE_PROFILE: 'store.profile'      // { name, description, telegram_link, support_email }
+  STORE_PROFILE: 'store.profile',     // { name, description, telegram_link, support_email }
+  STORE_BANNERS: 'store.banners'      // { items: [{ id, image_url, link, alt, active, order }] }
 };
 
 async function getSetting(key) {
