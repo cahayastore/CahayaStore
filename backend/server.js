@@ -69,8 +69,17 @@ app.use('/uploads', (req, res, next) => {
 
 // Serve mini admin SPA
 const ADMIN_DIR = path.resolve(__dirname, 'admin-panel');
-app.use('/admin', express.static(ADMIN_DIR, { extensions: ['html'] }));
-app.get('/admin/*', (_req, res) => res.sendFile(path.join(ADMIN_DIR, 'index.html')));
+app.use('/admin', express.static(ADMIN_DIR, {
+  extensions: ['html'],
+  setHeaders: (res) => {
+    // Admin JS/CSS are unversioned ES modules — never cache so updates load fresh.
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  },
+}));
+app.get('/admin/*', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(ADMIN_DIR, 'index.html'));
+});
 
 app.use((_req, res) => res.status(404).json({ success: false, message: 'Not found' }));
 app.use((err, _req, res, _next) => {
