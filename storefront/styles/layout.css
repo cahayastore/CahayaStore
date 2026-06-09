@@ -9,15 +9,15 @@
 .brand { display: inline-flex; align-items: center; gap: 12px; min-width: max-content; }
 .brand-full-logo {
   width: auto;
-  height: 40px;
-  max-width: 200px;
+  height: 52px;
+  max-width: 230px;
   object-fit: contain;
-  background: #fff;
-  border-radius: var(--radius-sm);
-  padding: 7px 12px;
-  box-shadow: var(--shadow-1);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
-.footer-brand .brand-full-logo { height: 48px; max-width: 190px; }
+.footer-brand .brand-full-logo { height: 44px; max-width: 200px; }
 .brand-logo { width: 52px; height: 52px; border-radius: 18px; background: white; box-shadow: var(--shadow-soft); }
 .brand-logo--mark {
   position: relative;
@@ -92,7 +92,7 @@
 @media (max-width: 760px) {
   .mk-header-inner { min-height: 56px; grid-template-columns: 1fr auto; gap: 12px; }
   .nav-search { grid-column: 1 / -1; height: 38px; max-width: 100%; }
-  .brand-full-logo { height: 36px; max-width: 180px; padding: 6px 10px; }
+  .brand-full-logo { height: 44px; max-width: 190px; padding: 0; }
   .brand-logo { width: 46px; height: 46px; border-radius: 16px; }
   .brand-copy strong { font-size: 16px; }
   .nav-login { display: none; }
