@@ -141,7 +141,7 @@ export async function pagePayment() {
         el('div', { class: 'sub' }, 'Konfigurasi MyQRIS + verifikasi otomatis via PayHook.')
       )
     ),
-    collapseCard('Konfigurasi MyQRIS', form, { open: true, subtitle: 'QRIS, PayHook token, nominal unik' }),
+    collapseCard('Konfigurasi MyQRIS', form, { open: false, subtitle: 'QRIS, PayHook token, nominal unik' }),
     collapseCard('Cara pakai PayHook', guide, { open: false, subtitle: 'Panduan setup webhook' })
   );
   return shell(wrap);
