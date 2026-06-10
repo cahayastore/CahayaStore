@@ -363,6 +363,26 @@ button { cursor: pointer; }
   .banner-thumb { width: 100%; }
 }
 
+/* ── Collapsible card ─────────────────────────────────── */
+.collapse-card { overflow: hidden; }
+.collapse-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 16px 20px; background: none; border: 0; cursor: pointer;
+  text-align: left; font-family: var(--font-h); color: var(--color-text-primary);
+}
+.collapse-title { display: flex; flex-direction: column; gap: 2px; }
+.collapse-title > span { font-size: 16px; font-weight: 800; }
+.collapse-title small { font-size: var(--fs-xs); color: var(--color-text-muted); font-weight: 600; }
+.collapse-chevron { color: var(--color-text-muted); font-size: 14px; transition: transform .2s ease; }
+.collapse-body {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .25s ease;
+}
+.collapse-body > * { overflow: hidden; padding: 0 20px; }
+.collapse-card.is-open .collapse-body { grid-template-rows: 1fr; }
+.collapse-card.is-open .collapse-body > * { padding: 0 20px 20px; }
+.collapse-card:not(.is-open) .collapse-head { padding-bottom: 16px; }
+
 /* ── Toast notifications ──────────────────────────────── */
 .toast-host {
   position: fixed;

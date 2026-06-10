@@ -14,6 +14,28 @@ function field(label, node, hint) {
   );
 }
 
+/* Collapsible card: clickable header toggles the body open/closed. */
+function collapseCard(title, bodyNode, { open = true, subtitle = '' } = {}) {
+  const body = el('div', { class: 'collapse-body' }, bodyNode);
+  const chevron = el('span', { class: 'collapse-chevron' }, '▾');
+  const header = el('button', {
+    type: 'button', class: 'collapse-head',
+    onclick: () => {
+      const isOpen = card.classList.toggle('is-open');
+      chevron.textContent = isOpen ? '▾' : '▸';
+    },
+  },
+    el('span', { class: 'collapse-title' },
+      el('span', {}, title),
+      subtitle ? el('small', {}, subtitle) : null
+    ),
+    chevron
+  );
+  const card = el('div', { class: 'card collapse-card' + (open ? ' is-open' : ''), style: 'margin-bottom:16px;padding:0' }, header, body);
+  if (!open) chevron.textContent = '▸';
+  return card;
+}
+
 export async function pagePayment() {
   const merchantName = el('input', { name: 'merchant_name', placeholder: 'Cahaya Store' });
   const qrisStatic = el('textarea', { name: 'qris_static', rows: '4', placeholder: '00020101021126...QRIS string dari merchant' });
@@ -101,8 +123,7 @@ export async function pagePayment() {
     }
   });
 
-  const guide = el('div', { class: 'card', style: 'margin-top:18px' },
-    el('h2', { style: 'margin:0 0 10px;font-size:16px' }, 'Cara pakai PayHook'),
+  const guide = el('div', {},
     el('ol', { style: 'margin:0;padding-left:18px;color:var(--color-text-secondary);font-size:14px;line-height:1.9' },
       el('li', {}, 'Install aplikasi PayHook di HP merchant (yang menerima notifikasi pembayaran).'),
       el('li', {}, 'Set URL webhook PayHook ke:'),
@@ -120,8 +141,8 @@ export async function pagePayment() {
         el('div', { class: 'sub' }, 'Konfigurasi MyQRIS + verifikasi otomatis via PayHook.')
       )
     ),
-    el('div', { class: 'card' }, form),
-    guide
+    collapseCard('Konfigurasi MyQRIS', form, { open: true, subtitle: 'QRIS, PayHook token, nominal unik' }),
+    collapseCard('Cara pakai PayHook', guide, { open: false, subtitle: 'Panduan setup webhook' })
   );
   return shell(wrap);
 }
