@@ -15,6 +15,8 @@ const { issueGatewaySession, issueWebSession, resolveCustomer } = require('../cu
 
 const router = express.Router();
 
+const ORDER_EXPIRE_MINUTES = Number(process.env.ORDER_EXPIRE_MINUTES) || 30;
+
 function genOrderNo() {
   return `CS-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
@@ -39,21 +41,79 @@ function parsePayhookAmount(p = {}) {
   return m ? Math.round(Number(m[1])) : 0;
 }
 
-/* Deliver stock for a paid order (assign one available item per order item). */
+/* Deliver stock for a paid order. Prefer stock reserved for this order, then any available. */
 async function deliverOrder(client, orderId) {
-  const oi = await client.query("SELECT id, product_id FROM order_items WHERE order_id = $1", [orderId]);
+  const oi = await client.query(
+    "SELECT id, product_id, quantity FROM order_items WHERE order_id = $1",
+    [orderId]
+  );
   for (const item of oi.rows) {
-    const stock = await client.query(
-      `SELECT id FROM product_stocks WHERE product_id = $1 AND status = 'available'
-        ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`,
-      [item.product_id]
-    );
-    if (stock.rows.length) {
-      await client.query("UPDATE product_stocks SET status='sold', sold_at=now() WHERE id = $1", [stock.rows[0].id]);
-      await client.query("UPDATE order_items SET delivered_stock_id = $2 WHERE id = $1", [item.id, stock.rows[0].id]);
+    const qty = Math.max(1, Number(item.quantity) || 1);
+    for (let n = 0; n < qty; n++) {
+      // 1) Prefer stock reserved for this exact order.
+      let stock = await client.query(
+        `SELECT id FROM product_stocks
+          WHERE product_id = $1 AND reserved_order_id = $2 AND status IN ('available','reserved')
+          ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`,
+        [item.product_id, orderId]
+      );
+      // 2) Fall back to any genuinely available (unreserved or expired reservation) stock.
+      if (!stock.rows.length) {
+        stock = await client.query(
+          `SELECT id FROM product_stocks
+            WHERE product_id = $1 AND status = 'available'
+              AND (reserved_until IS NULL OR reserved_until < now() OR reserved_order_id = $2)
+            ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`,
+          [item.product_id, orderId]
+        );
+      }
+      if (stock.rows.length) {
+        await client.query(
+          "UPDATE product_stocks SET status='sold', sold_at=now(), reserved_until=NULL, reserved_order_id=NULL WHERE id = $1",
+          [stock.rows[0].id]
+        );
+        await client.query(
+          "UPDATE order_items SET delivered_stock_id = $2 WHERE id = $1",
+          [item.id, stock.rows[0].id]
+        );
+      }
     }
   }
   await client.query("INSERT INTO deliveries (order_id, delivery_type, status) VALUES ($1,'manual','delivered')", [orderId]);
+}
+
+/* Expire pending orders past their expiry window and release reserved stock. */
+async function expireStaleOrders() {
+  return tx(async (client) => {
+    const expired = await client.query(
+      `UPDATE orders
+          SET status = 'expired', payment_status = 'expired', updated_at = now()
+        WHERE payment_status IN ('pending','unpaid')
+          AND status IN ('pending','pending_payment')
+          AND expires_at IS NOT NULL
+          AND expires_at < now()
+        RETURNING id`
+    );
+    if (expired.rows.length) {
+      const ids = expired.rows.map((r) => r.id);
+      await client.query(
+        `UPDATE product_stocks
+            SET status = 'available', reserved_until = NULL, reserved_order_id = NULL
+          WHERE reserved_order_id = ANY($1::uuid[])
+            AND status IN ('available','reserved')`,
+        [ids]
+      );
+    }
+    // Also free any orphaned reservations whose window simply lapsed.
+    await client.query(
+      `UPDATE product_stocks
+          SET status = 'available', reserved_until = NULL, reserved_order_id = NULL
+        WHERE reserved_until IS NOT NULL
+          AND reserved_until < now()
+          AND status IN ('available','reserved')`
+    );
+    return expired.rows.length;
+  });
 }
 
 /* POST /api/public/web-checkout */
@@ -141,9 +201,9 @@ router.post('/public/web-checkout', async (req, res) => {
   try {
     const result = await tx(async (client) => {
       const o = await client.query(
-        `INSERT INTO orders (order_no, user_id, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token)
-         VALUES ($1,$2,$3,$4,$5,'pending_payment','pending',$6) RETURNING *`,
-        [orderNo, customer.id, normEmail, customerWhatsapp || null, uniqueAmount, accessToken]
+        `INSERT INTO orders (order_no, user_id, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token, expires_at)
+         VALUES ($1,$2,$3,$4,$5,'pending_payment','pending',$6, now() + ($7 || ' minutes')::interval) RETURNING *`,
+        [orderNo, customer.id, normEmail, customerWhatsapp || null, uniqueAmount, accessToken, String(ORDER_EXPIRE_MINUTES)]
       );
       const order = o.rows[0];
       for (const ln of lines) {
@@ -151,6 +211,18 @@ router.post('/public/web-checkout', async (req, res) => {
           `INSERT INTO order_items (order_id, product_id, partner_id, quantity, unit_price, subtotal)
            VALUES ($1,$2,$3,$4,$5,$6)`,
           [order.id, ln.product_id, ln.partner_id, ln.quantity, ln.unit_price, ln.subtotal]
+        );
+        // Reserve stock items for this order so concurrent buyers can't grab them.
+        await client.query(
+          `UPDATE product_stocks SET reserved_until = now() + ($3 || ' minutes')::interval, reserved_order_id = $4
+             WHERE id IN (
+               SELECT id FROM product_stocks
+                WHERE product_id = $1 AND status = 'available'
+                  AND (reserved_until IS NULL OR reserved_until < now())
+                ORDER BY created_at ASC
+                LIMIT $2 FOR UPDATE SKIP LOCKED
+             )`,
+          [ln.product_id, ln.quantity, String(ORDER_EXPIRE_MINUTES), order.id]
         );
       }
       let invoice;
@@ -182,7 +254,7 @@ router.post('/public/web-checkout', async (req, res) => {
         paymentMethod: 'qris',
         gatewayProvider: result.invoice.provider || 'myqris',
         paymentUrl: null,
-        expiresAt: null,
+        expiresAt: result.order.expires_at,
         webSessionToken,
         gatewaySession,
       },
@@ -195,8 +267,11 @@ router.post('/public/web-checkout', async (req, res) => {
 
 /* GET /api/payment-gateways/status/:orderNo */
 router.get('/payment-gateways/status/:orderNo', async (req, res) => {
+  // Opportunistically expire stale pending orders + release reserved stock.
+  expireStaleOrders().catch((e) => console.error('[web-checkout expire]', e.message));
+
   const r = await query(
-    "SELECT order_no, payment_status, status, paid_at FROM orders WHERE order_no = $1",
+    "SELECT order_no, payment_status, status, paid_at, expires_at FROM orders WHERE order_no = $1",
     [req.params.orderNo]
   );
   if (!r.rows.length) return res.status(404).json({ success: false, message: 'Order tidak ditemukan.' });
@@ -206,6 +281,7 @@ router.get('/payment-gateways/status/:orderNo', async (req, res) => {
     data: {
       status: String(o.payment_status || 'pending').toLowerCase(),
       paidAt: o.paid_at,
+      expiresAt: o.expires_at,
       transaction: { orderId: o.order_no, orderStatus: o.status },
     },
   });
@@ -373,3 +449,4 @@ router.post('/payment-gateways/webhook/payhook', payhookHandler);
 router.post('/payment-gateways/webhook/myqris/payhook', payhookHandler);
 
 module.exports = router;
+module.exports.expireStaleOrders = expireStaleOrders;

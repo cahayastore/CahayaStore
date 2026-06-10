@@ -51,7 +51,8 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', require('./src/routes/auth.routes'));
 app.use('/api', require('./src/routes/public.routes'));
 app.use('/api', require('./src/routes/checkout.routes'));
-app.use('/api', require('./src/routes/web-checkout.routes'));
+const webCheckout = require('./src/routes/web-checkout.routes');
+app.use('/api', webCheckout);
 app.use('/api/admin', require('./src/routes/admin'));
 
 // Serve uploaded media from a persistent dir (survives deploys).
@@ -93,3 +94,14 @@ const server = app.listen(PORT, '127.0.0.1', () => {
 server.requestTimeout = 30000;
 server.headersTimeout = 35000;
 server.keepAliveTimeout = 5000;
+
+// Background sweeper: expire stale pending orders + release reserved stock.
+if (typeof webCheckout.expireStaleOrders === 'function') {
+  const SWEEP_MS = Number(process.env.ORDER_SWEEP_MS) || 60000;
+  const sweep = () => webCheckout.expireStaleOrders()
+    .then((n) => { if (n) console.log(`[sweeper] expired ${n} stale order(s)`); })
+    .catch((e) => console.error('[sweeper]', e.message));
+  const timer = setInterval(sweep, SWEEP_MS);
+  timer.unref();
+  setTimeout(sweep, 5000).unref();
+}
