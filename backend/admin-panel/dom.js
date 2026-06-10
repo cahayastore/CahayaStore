@@ -73,3 +73,25 @@ export function toast(message, kind = 'ok', ms = 3200) {
   node.addEventListener('click', () => { clearTimeout(timer); remove(); });
   return node;
 }
+
+/* Collapsible card: clickable header toggles the body open/closed. */
+export function collapseCard(title, bodyNode, { open = true, subtitle = '' } = {}) {
+  const body = el('div', { class: 'collapse-body' }, bodyNode);
+  const chevron = el('span', { class: 'collapse-chevron' }, open ? '▾' : '▸');
+  const card = el('div', { class: 'card collapse-card' + (open ? ' is-open' : ''), style: 'margin-bottom:16px;padding:0' });
+  const header = el('button', {
+    type: 'button', class: 'collapse-head',
+    onclick: () => {
+      const isOpen = card.classList.toggle('is-open');
+      chevron.textContent = isOpen ? '▾' : '▸';
+    },
+  },
+    el('span', { class: 'collapse-title' },
+      el('span', {}, title),
+      subtitle ? el('small', {}, subtitle) : null
+    ),
+    chevron
+  );
+  card.append(header, body);
+  return card;
+}

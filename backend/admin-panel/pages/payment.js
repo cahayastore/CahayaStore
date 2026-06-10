@@ -1,5 +1,5 @@
 /* Admin page: Pembayaran (MyQRIS + PayHook) */
-import { el, toast } from '../dom.js';
+import { el, toast, collapseCard } from '../dom.js';
 import { api, API_BASE, session } from '../api.js';
 import { shell } from '../shell.js';
 
@@ -12,28 +12,6 @@ function field(label, node, hint) {
     node,
     hint ? el('div', { class: 'hint', style: 'margin-top:4px' }, hint) : null
   );
-}
-
-/* Collapsible card: clickable header toggles the body open/closed. */
-function collapseCard(title, bodyNode, { open = true, subtitle = '' } = {}) {
-  const body = el('div', { class: 'collapse-body' }, bodyNode);
-  const chevron = el('span', { class: 'collapse-chevron' }, '▾');
-  const header = el('button', {
-    type: 'button', class: 'collapse-head',
-    onclick: () => {
-      const isOpen = card.classList.toggle('is-open');
-      chevron.textContent = isOpen ? '▾' : '▸';
-    },
-  },
-    el('span', { class: 'collapse-title' },
-      el('span', {}, title),
-      subtitle ? el('small', {}, subtitle) : null
-    ),
-    chevron
-  );
-  const card = el('div', { class: 'card collapse-card' + (open ? ' is-open' : ''), style: 'margin-bottom:16px;padding:0' }, header, body);
-  if (!open) chevron.textContent = '▸';
-  return card;
 }
 
 export async function pagePayment() {

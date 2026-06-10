@@ -1,4 +1,4 @@
-import { el, alertBox, toast } from '../dom.js';
+import { el, alertBox, toast, collapseCard } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
 import { buildChangePasswordCard } from './settings/change-password.js';
@@ -73,11 +73,7 @@ function buildSection(section) {
     }
   });
 
-  return el('div', { class: 'card', style: 'margin-bottom:18px' },
-    el('h2', { style: 'margin:0 0 10px;font-size:18px' }, section.title),
-    section.note ? el('p', { class: 'muted', style: 'margin:0 0 14px' }, section.note) : null,
-    form
-  );
+  return collapseCard(section.title, form, { open: false, subtitle: section.note || '' });
 }
 
 export async function pageSettings() {
@@ -90,7 +86,7 @@ export async function pageSettings() {
     )
   );
   // Security card di atas (paling penting)
-  wrap.appendChild(buildChangePasswordCard());
+  wrap.appendChild(collapseCard('Ubah Password', buildChangePasswordCard(), { open: false, subtitle: 'Keamanan akun admin' }));
   // Konfigurasi lain
   for (const s of SECTIONS) wrap.appendChild(buildSection(s));
   return shell(wrap);

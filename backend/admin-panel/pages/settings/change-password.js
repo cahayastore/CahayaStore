@@ -113,8 +113,7 @@ export function buildChangePasswordCard() {
     }
   });
 
-  return el('div', { class: 'card', style: 'margin-bottom:18px' },
-    el('h2', { style: 'margin:0 0 6px;font-size:18px' }, 'Ubah Password'),
+  return el('div', {},
     el('p', { class: 'muted', style: 'margin:0 0 14px' },
       'Untuk keamanan, ganti password sementara dengan password pribadi yang kuat.'),
     form
