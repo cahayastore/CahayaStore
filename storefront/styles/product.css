@@ -33,10 +33,10 @@
 .pd-buy { flex: 1; min-width: 200px; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: var(--radius-md); background: var(--primary); color: #fff; font-family: var(--display); font-weight: 700; font-size: 16px; cursor: pointer; }
 .pd-buy:hover { background: var(--primary-dark); }
 .pd-buy:disabled { background: var(--muted); cursor: not-allowed; }
-.pd-error { grid-column: 1 / -1; padding: 40px; text-align: center; background: #fff; border: 1px solid var(--panel-line); border-radius: var(--radius-md); }
+.pd-error { grid-column: 1 / -1; padding: 40px; text-align: center; background: var(--cds-surface); border: 1px solid var(--panel-line); border-radius: var(--radius-md); }
 .pd-error b { display: block; font-size: 18px; margin-bottom: 6px; }
 
-.pd-footer { border-top: 1px solid var(--panel-line); background: #fff; padding: 20px 0; margin-top: 30px; }
+.pd-footer { border-top: 1px solid var(--panel-line); background: var(--cds-surface); padding: 20px 0; margin-top: 30px; }
 .pd-footer .container { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; }
 
 @media (max-width: 760px) {

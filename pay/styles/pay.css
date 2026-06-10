@@ -33,7 +33,7 @@
 
 .pay-email { margin-top: 16px; display: grid; gap: 10px; max-width: 360px; margin-left: auto; margin-right: auto; text-align: left; }
 .pay-email p { margin: 0; font-size: 14px; font-weight: 600; }
-.pay-email input { height: 44px; border: 1px solid var(--cds-border); border-radius: var(--radius-md); padding: 0 12px; font-size: 16px; }
+.pay-email input { height: 44px; border: 1px solid var(--cds-border); border-radius: var(--radius-md); padding: 0 12px; font-size: 16px; background: var(--cds-surface); color: var(--text); }
 .pay-email input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(48,127,226,.12); }
 .pay-err { color: var(--danger); font-size: 13px; min-height: 18px; }
 
@@ -43,7 +43,7 @@
 .pay-pre { text-align: left; white-space: pre-wrap; font-family: var(--font-ui); }
 .pay-open { min-width: 200px; }
 
-.pd-footer { border-top: 1px solid var(--panel-line); background: #fff; padding: 20px 0; margin-top: 30px; }
+.pd-footer { border-top: 1px solid var(--panel-line); background: var(--cds-surface); padding: 20px 0; margin-top: 30px; }
 .pd-footer .container { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; }
 
 @media (max-width: 760px) {
@@ -54,7 +54,7 @@
 
 /* ── Set password panel + account links ──────────────── */
 .pay-setpw { margin: 18px auto 6px; max-width: 380px; padding: 16px; border: 1px dashed var(--cds-border); border-radius: var(--radius-md); background: var(--bg-soft); display: grid; gap: 10px; text-align: center; }
-.pay-setpw input { height: 44px; border: 1px solid var(--cds-border); border-radius: var(--radius-md); padding: 0 12px; font-size: 16px; }
+.pay-setpw input { height: 44px; border: 1px solid var(--cds-border); border-radius: var(--radius-md); padding: 0 12px; font-size: 16px; background: var(--cds-surface); color: var(--text); }
 .pay-setpw input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(48,127,226,.12); }
 .pay-account-links { margin-top: 14px; }
 .pay-account-links a { color: var(--primary); font-weight: 700; font-size: 13px; }
@@ -68,7 +68,7 @@
 
 /* ── Login + history head ────────────────────────────── */
 .pay-login { margin: 16px auto 6px; max-width: 360px; display: grid; gap: 10px; }
-.pay-login input { height: 44px; border: 1px solid var(--cds-border); border-radius: var(--radius-md); padding: 0 12px; font-size: 16px; }
+.pay-login input { height: 44px; border: 1px solid var(--cds-border); border-radius: var(--radius-md); padding: 0 12px; font-size: 16px; background: var(--cds-surface); color: var(--text); }
 .pay-login input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(48,127,226,.12); }
 .pay-hist-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .pay-hist-who { font-size: 12px; color: var(--muted); font-weight: 700; }

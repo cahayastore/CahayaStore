@@ -78,7 +78,7 @@
 .empty-state { border: 1px dashed var(--panel-line); border-radius: var(--radius-md); padding: 28px; text-align: center; background: var(--bg-soft); color: var(--soft); }
 .empty-state b { display: block; color: var(--text); margin-bottom: 6px; }
 .why-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.why-item { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--panel-line); background: white; border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-1); }
+.why-item { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--panel-line); background: var(--cds-surface); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-1); }
 .why-icon { min-width: 40px; height: 40px; border-radius: var(--radius-pill); display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); font-family: var(--display); font-weight: 700; }
 .why-item b { font-size: 14px; font-weight: 700; }
 .why-item p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
