@@ -1,9 +1,9 @@
 .banner-section { padding: 24px 0 6px; }
 .banner-carousel { position: relative; overflow: hidden; border-radius: var(--radius-md); box-shadow: var(--shadow-1); border: 1px solid var(--panel-line); background: var(--bg-soft); }
 .banner-track { display: flex; transition: transform .5s ease; }
-.banner-slide { flex: 0 0 100%; display: block; aspect-ratio: 1600 / 600; background: var(--bg-soft); }
+.banner-slide { flex: 0 0 100%; display: block; aspect-ratio: 1600 / 420; background: var(--bg-soft); }
 .banner-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.banner-slide--loading { aspect-ratio: 1600 / 600; background: linear-gradient(100deg, var(--bg-soft) 30%, rgba(255,255,255,.6) 50%, var(--bg-soft) 70%); background-size: 200% 100%; animation: bannerShimmer 1.4s infinite; }
+.banner-slide--loading { aspect-ratio: 1600 / 420; background: linear-gradient(100deg, var(--bg-soft) 30%, rgba(255,255,255,.6) 50%, var(--bg-soft) 70%); background-size: 200% 100%; animation: bannerShimmer 1.4s infinite; }
 @keyframes bannerShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .banner-dots { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
 .banner-dot { width: 9px; height: 9px; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--panel-line); cursor: pointer; transition: width .2s ease, background .2s ease; }
