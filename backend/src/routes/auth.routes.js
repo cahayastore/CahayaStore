@@ -3,6 +3,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { query } = require('../db');
 const { signToken, requireAuth } = require('../auth.middleware');
+const { verifyAny, issueGatewaySession, requireCustomerAuth } = require('../customer-auth');
 
 const router = express.Router();
 
@@ -104,6 +105,38 @@ router.post('/change-password', requireAuth(), async (req, res) => {
   } catch (_) { /* non-fatal */ }
 
   res.json({ success: true, message: 'Password berhasil diubah' });
+});
+
+/* ── Customer set-password (passwordless → real account) ──────────────
+   POST /api/auth/set-password  Bearer accessToken  { newPassword (min 8) }
+   Guard: if password already set → 409 PASSWORD_ALREADY_SET. */
+router.post('/set-password', requireCustomerAuth, async (req, res) => {
+  const { newPassword } = req.body || {};
+  if (!newPassword || String(newPassword).length < 8) {
+    return res.status(400).json({ success: false, message: 'Password minimal 8 karakter.' });
+  }
+  const u = await query("SELECT id, password_hash FROM users WHERE id = $1 AND is_active = TRUE", [req.customerId]);
+  if (!u.rows.length) return res.status(404).json({ success: false, message: 'Akun tidak ditemukan.' });
+  if (u.rows[0].password_hash) {
+    return res.status(409).json({ success: false, code: 'PASSWORD_ALREADY_SET', message: 'Password sudah diatur. Gunakan ganti password.' });
+  }
+  const hash = await bcrypt.hash(String(newPassword), 10);
+  await query("UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2", [hash, req.customerId]);
+  res.json({ success: true, message: 'Password berhasil dibuat. Sekarang bisa login dengan email & password.' });
+});
+
+/* ── Refresh passwordless access token ──────────────────────────────
+   POST /api/auth/refresh  { refreshToken } → new gatewaySession. */
+router.post('/refresh', async (req, res) => {
+  const { refreshToken } = req.body || {};
+  if (!refreshToken) return res.status(400).json({ success: false, message: 'refreshToken wajib.' });
+  const payload = verifyAny(String(refreshToken));
+  if (!payload || payload.type !== 'refresh' || !payload.sub) {
+    return res.status(401).json({ success: false, message: 'Refresh token tidak valid.' });
+  }
+  const u = await query("SELECT id, email, name, role FROM users WHERE id = $1 AND is_active = TRUE", [payload.sub]);
+  if (!u.rows.length) return res.status(401).json({ success: false, message: 'Akun tidak aktif.' });
+  res.json({ success: true, data: issueGatewaySession(u.rows[0]) });
 });
 
 module.exports = router;

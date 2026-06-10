@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const { query, tx } = require('../db');
 const { createInvoice, getUniqueMax, verifyPayhookToken } = require('../payment/myqris.service');
 const { decryptString } = require('../crypto');
+const { issueGatewaySession, issueWebSession, resolveCustomer } = require('../customer-auth');
 
 const router = express.Router();
 
@@ -103,12 +104,46 @@ router.post('/public/web-checkout', async (req, res) => {
     }
   } catch { uniqueAmount = total; }
 
+  // ── Auto-register customer by email (passwordless). Never sets password. ──
+  // If already logged in, use that account. Otherwise upsert by email.
+  const normEmail = String(email).toLowerCase().trim();
+  let customer = null;
+  const existingAuth = resolveCustomer(req);
+  try {
+    if (existingAuth) {
+      const u = await query("SELECT id, email, name, role, password_hash FROM users WHERE id = $1", [existingAuth.userId]);
+      if (u.rows.length) customer = u.rows[0];
+    }
+    if (!customer) {
+      const up = await query(
+        `INSERT INTO users (role, name, email, password_hash, is_active)
+         VALUES ('buyer', $2, $1, NULL, TRUE)
+         ON CONFLICT (email) DO UPDATE SET is_active = TRUE, updated_at = now()
+         RETURNING id, email, name, role, password_hash`,
+        [normEmail, normEmail.split('@')[0]]
+      );
+      customer = up.rows[0];
+    }
+    // Backfill WhatsApp/phone if empty.
+    if (customerWhatsapp) {
+      await query("UPDATE users SET phone = COALESCE(phone, $2), updated_at = now() WHERE id = $1", [customer.id, customerWhatsapp]);
+    }
+  } catch (e) {
+    console.error('[web-checkout auto-register]', e);
+    return res.status(500).json({ success: false, message: 'Gagal memproses akun.' });
+  }
+
+  const userHasPassword = Boolean(customer.password_hash);
+  // Passwordless account → safe to auto-login. Password account → never auto-login.
+  const gatewaySession = userHasPassword ? null : issueGatewaySession(customer);
+  const webSessionToken = issueWebSession(customer);
+
   try {
     const result = await tx(async (client) => {
       const o = await client.query(
-        `INSERT INTO orders (order_no, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token)
-         VALUES ($1,$2,$3,$4,'pending_payment','pending',$5) RETURNING *`,
-        [orderNo, String(email).toLowerCase().trim(), customerWhatsapp || null, uniqueAmount, accessToken]
+        `INSERT INTO orders (order_no, user_id, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token)
+         VALUES ($1,$2,$3,$4,$5,'pending_payment','pending',$6) RETURNING *`,
+        [orderNo, customer.id, normEmail, customerWhatsapp || null, uniqueAmount, accessToken]
       );
       const order = o.rows[0];
       for (const ln of lines) {
@@ -148,6 +183,8 @@ router.post('/public/web-checkout', async (req, res) => {
         gatewayProvider: result.invoice.provider || 'myqris',
         paymentUrl: null,
         expiresAt: null,
+        webSessionToken,
+        gatewaySession,
       },
     });
   } catch (e) {
@@ -178,7 +215,7 @@ router.get('/payment-gateways/status/:orderNo', async (req, res) => {
 router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
   const token = String(req.query.token || '');
   const r = await query(
-    `SELECT o.id, o.order_no, o.payment_status, o.access_token, o.buyer_email,
+    `SELECT o.id, o.order_no, o.payment_status, o.access_token, o.buyer_email, o.user_id,
             o.paid_at, oi.product_id, oi.delivered_stock_id, p.name AS product_name, p.stock_type
        FROM orders o
        JOIN order_items oi ON oi.order_id = o.id
@@ -189,8 +226,17 @@ router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
   );
   if (!r.rows.length) return res.status(404).json({ success: false, message: 'Order tidak ditemukan.' });
   const row = r.rows[0];
-  if (!token || token !== row.access_token) {
-    return res.status(403).json({ success: false, message: 'Token akses tidak valid.' });
+
+  // Access guard:
+  //  - logged-in owner (Bearer/web-session sub === order.user_id) → allow
+  //  - legacy order without user_id → allow if ?token matches access_token
+  //  - modern order (has user_id) → owner-only (token alone NOT enough)
+  const auth = resolveCustomer(req);
+  const isOwner = auth && row.user_id && String(auth.userId) === String(row.user_id);
+  const tokenOk = token && token === row.access_token;
+  const allowed = isOwner || (!row.user_id && tokenOk);
+  if (!allowed) {
+    return res.status(404).json({ success: false, message: 'Order tidak ditemukan.' });
   }
 
   if (row.payment_status !== 'paid') {
@@ -227,6 +273,39 @@ router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
       stockType,
       deliveredAt: row.paid_at,
     },
+  });
+});
+
+/* ── Order history (owner-only) ───────────────────────────────────────
+   GET /api/public/web-checkout/orders
+   Auth: Bearer accessToken OR ?webSessionToken=. Lists the customer's orders. */
+router.get('/public/web-checkout/orders', async (req, res) => {
+  const auth = resolveCustomer(req);
+  if (!auth) return res.status(401).json({ success: false, message: 'Perlu login.' });
+  const r = await query(
+    `SELECT o.order_no, o.total_amount, o.payment_status, o.status, o.created_at, o.paid_at, o.access_token,
+            COALESCE(json_agg(p.name) FILTER (WHERE p.name IS NOT NULL), '[]') AS products
+       FROM orders o
+       JOIN order_items oi ON oi.order_id = o.id
+       LEFT JOIN products p ON p.id = oi.product_id
+      WHERE o.user_id = $1
+      GROUP BY o.id
+      ORDER BY o.created_at DESC
+      LIMIT 100`,
+    [auth.userId]
+  );
+  res.json({
+    success: true,
+    data: r.rows.map((o) => ({
+      orderId: o.order_no,
+      amount: Number(o.total_amount),
+      paymentStatus: o.payment_status,
+      status: o.status,
+      products: o.products,
+      token: o.access_token,
+      createdAt: o.created_at,
+      paidAt: o.paid_at,
+    })),
   });
 });
 

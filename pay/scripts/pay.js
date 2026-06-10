@@ -13,12 +13,34 @@ function esc(v) {
 }
 const root = () => document.querySelector('[data-pay]');
 
+/* ── Customer session (persists across browsers via login) ──────────── */
+const SESSION_KEY = 'cs_session';
+function saveSession(d) {
+  const sess = { webSessionToken: d.webSessionToken || null };
+  if (d.gatewaySession) {
+    sess.accessToken = d.gatewaySession.accessToken;
+    sess.refreshToken = d.gatewaySession.refreshToken;
+    sess.user = d.gatewaySession.user;
+  }
+  const prev = getSession();
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ ...prev, ...sess }));
+}
+function getSession() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch { return {}; }
+}
+function clearSession() { localStorage.removeItem(SESSION_KEY); }
+function authHeaders() {
+  const s = getSession();
+  return s.accessToken ? { Authorization: `Bearer ${s.accessToken}` } : {};
+}
+
 /* ── Routing ─────────────────────────────────────────── */
 function route() {
   const path = location.pathname;
   const payment = path.match(/\/payment\/([^/?#]+)/i);
   const order = path.match(/\/order\/([^/?#]+)/i);
   const params = new URLSearchParams(location.search);
+  if (path.match(/\/riwayat\b/i) || params.get('view') === 'history') return { view: 'history' };
   if (payment) return { view: 'payment', orderNo: decodeURIComponent(payment[1]), token: params.get('t') };
   if (order) return { view: 'order', orderNo: decodeURIComponent(order[1]), token: params.get('t') };
   // Direct buy: /?product=<id> (legacy) or /?buy=<id>
@@ -74,6 +96,7 @@ async function createOrder(productId, qty) {
       });
       const d = r.data;
       if (d.qrisData) sessionStorage.setItem('cs_qris_' + d.orderId, d.qrisData);
+      saveSession(d);
       location.replace(`/payment/${encodeURIComponent(d.orderId)}?t=${encodeURIComponent(d.accessToken)}`);
     } catch (e) {
       err.textContent = e.message;
@@ -138,8 +161,11 @@ async function renderPayment(orderNo, token) {
 
 /* ── Order / credentials page ───────────────────────── */
 async function renderOrder(orderNo, token) {
+  const sess = getSession();
   async function load() {
-    return api(`/public/web-checkout/credentials/${encodeURIComponent(orderNo)}?token=${encodeURIComponent(token || '')}`);
+    const ws = sess.webSessionToken ? `&webSessionToken=${encodeURIComponent(sess.webSessionToken)}` : '';
+    return api(`/public/web-checkout/credentials/${encodeURIComponent(orderNo)}?token=${encodeURIComponent(token || '')}${ws}`,
+      { headers: authHeaders() });
   }
   let data;
   try { data = (await load()).data; } catch (e) { root().innerHTML = errCard(e.message); return; }
@@ -192,6 +218,10 @@ async function renderOrder(orderNo, token) {
     <h2>${esc(data.productName || 'Produk kamu')}</h2>
     <p class="muted">Order ${esc(orderNo)}</p>
     ${body}
+    ${setPasswordPanel()}
+    <div class="pay-account-links">
+      <a href="/riwayat">Riwayat belanja saya →</a>
+    </div>
     <p class="pay-hint">Simpan halaman ini. Butuh bantuan? Hubungi admin Cahaya Store.</p>
   </div>`;
 
@@ -201,6 +231,80 @@ async function renderOrder(orderNo, token) {
       catch { /* */ }
     });
   });
+  bindSetPassword();
+}
+
+/* Set-password panel: only for passwordless accounts (we have an accessToken). */
+function setPasswordPanel() {
+  const s = getSession();
+  if (!s.accessToken || s.passwordSet) return '';
+  return `<div class="pay-setpw" data-setpw>
+    <div class="pay-cred-label">Amankan akun kamu</div>
+    <p class="pay-hint" style="margin:4px 0 10px">Buat password agar bisa login & lihat riwayat belanja dari perangkat mana pun.</p>
+    <input type="password" placeholder="Password baru (min 8)" data-pw />
+    <button class="btn btn-primary" data-pw-save>Simpan Password</button>
+    <div class="pay-err" data-pw-msg></div>
+  </div>`;
+}
+
+function bindSetPassword() {
+  const wrap = root().querySelector('[data-setpw]');
+  if (!wrap) return;
+  const input = wrap.querySelector('[data-pw]');
+  const btn = wrap.querySelector('[data-pw-save]');
+  const msg = wrap.querySelector('[data-pw-msg]');
+  btn.addEventListener('click', async () => {
+    const pw = String(input.value || '');
+    if (pw.length < 8) { msg.textContent = 'Password minimal 8 karakter.'; return; }
+    btn.disabled = true; btn.textContent = 'Menyimpan…'; msg.textContent = '';
+    try {
+      await api('/auth/set-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ newPassword: pw }),
+      });
+      const sess = getSession(); sess.passwordSet = true;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+      wrap.innerHTML = '<div class="pay-badge ok">✓ Password tersimpan</div><p class="pay-hint" style="margin-top:8px">Sekarang kamu bisa login dengan email & password.</p>';
+    } catch (e) {
+      msg.textContent = e.message;
+      btn.disabled = false; btn.textContent = 'Simpan Password';
+    }
+  });
+}
+
+/* ── Order history (owner-only) ─────────────────────── */
+async function renderHistory() {
+  const s = getSession();
+  if (!s.accessToken && !s.webSessionToken) {
+    root().innerHTML = `<div class="pay-card pay-center">
+      <h2>Riwayat Belanja</h2>
+      <p class="muted">Belum ada sesi. Lakukan pembelian dulu untuk membuat akun otomatis.</p>
+      <a class="btn btn-primary" href="https://cahayastore.me/">Ke Toko</a>
+    </div>`;
+    return;
+  }
+  root().innerHTML = `<div class="pay-card"><h2>Riwayat Belanja</h2><p class="muted" data-h>Memuat…</p></div>`;
+  try {
+    const ws = s.webSessionToken ? `?webSessionToken=${encodeURIComponent(s.webSessionToken)}` : '';
+    const r = await api(`/public/web-checkout/orders${ws}`, { headers: authHeaders() });
+    const orders = r.data || [];
+    const host = root().querySelector('.pay-card');
+    if (!orders.length) {
+      host.innerHTML = '<h2>Riwayat Belanja</h2><p class="muted">Belum ada pesanan.</p>';
+      return;
+    }
+    host.innerHTML = '<h2>Riwayat Belanja</h2>' + orders.map((o) => `
+      <a class="pay-hist-row" href="/order/${encodeURIComponent(o.orderId)}?t=${encodeURIComponent(o.token || '')}">
+        <div class="pay-hist-main">
+          <span class="pay-hist-name">${esc((o.products || []).join(', ') || o.orderId)}</span>
+          <span class="pay-hist-meta">${esc(o.orderId)} · ${rupiah(o.amount)}</span>
+        </div>
+        <span class="pay-badge ${PAID.includes(o.paymentStatus) ? 'ok' : 'wait'}">${PAID.includes(o.paymentStatus) ? 'Lunas' : 'Menunggu'}</span>
+      </a>`).join('');
+  } catch (e) {
+    root().querySelector('[data-h]').textContent = e.message;
+  }
 }
 
 function errCard(msg) {
@@ -224,4 +328,5 @@ const r = route();
 if (r.view === 'create') createOrder(r.productId, r.qty);
 else if (r.view === 'payment') renderPayment(r.orderNo, r.token);
 else if (r.view === 'order') renderOrder(r.orderNo, r.token);
+else if (r.view === 'history') renderHistory();
 else renderEmpty();
