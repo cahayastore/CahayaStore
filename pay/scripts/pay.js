@@ -103,10 +103,11 @@ async function createOrder(productId, qty) {
     localStorage.setItem('cs_guest_email', email);
     submit.disabled = true; submit.textContent = 'Memproses…'; err.textContent = '';
     try {
+      const telegramInitData = (window.CahayaMiniApp && window.CahayaMiniApp.getInitData && window.CahayaMiniApp.getInitData()) || undefined;
       const r = await api('/public/web-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, paymentMethod: 'qris', items: [{ productId, quantity: qty }] }),
+        body: JSON.stringify({ email, paymentMethod: 'qris', items: [{ productId, quantity: qty }], telegramInitData }),
       });
       const d = r.data;
       if (d.qrisData) sessionStorage.setItem('cs_qris_' + d.orderId, d.qrisData);

@@ -30,6 +30,23 @@ app.use('/api/webhooks',
   express.raw({ type: '*/*', limit: '1mb' }),
   require('./src/routes/webhook.routes'));
 
+// Telegram webhook (central bot) — dedicated JSON parser, non-blocking.
+// Replies 200 immediately, then processes the update via setImmediate so we
+// never hit Telegram's 60s timeout and pending_update_count stays low.
+app.post('/webhooks/telegram', express.json({ limit: '1mb' }), async (req, res) => {
+  const provided = req.header('x-telegram-bot-api-secret-token') || '';
+  const tg = require('./src/telegram/bot-loader');
+  let ok = false;
+  try { ok = await tg.verifyWebhookSecret(provided); } catch { ok = false; }
+  if (!ok) return res.status(401).json({ ok: false });
+
+  const update = req.body;
+  res.status(200).json({ ok: true });
+  setImmediate(() => {
+    tg.handleUpdate(update).catch((e) => console.error('[tg handleUpdate]', e.message));
+  });
+});
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(compression({ level: 3, threshold: 1024 }));
@@ -53,6 +70,7 @@ app.use('/api', require('./src/routes/public.routes'));
 app.use('/api', require('./src/routes/checkout.routes'));
 const webCheckout = require('./src/routes/web-checkout.routes');
 app.use('/api', webCheckout);
+app.use('/api', require('./src/routes/miniapp.routes'));
 app.use('/api/admin', require('./src/routes/admin'));
 
 // Serve uploaded media from a persistent dir (survives deploys).

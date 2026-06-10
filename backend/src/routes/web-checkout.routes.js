@@ -215,14 +215,35 @@ router.post('/public/web-checkout', async (req, res) => {
   const gatewaySession = userHasPassword ? null : issueGatewaySession(customer);
   const webSessionToken = issueWebSession(customer);
 
+  // ── Channel attribution: Mini App checkout sends telegramInitData ──
+  let channel = 'web';
+  const telegramInitData = req.body && req.body.telegramInitData;
+  if (telegramInitData) {
+    try {
+      const { validateInitData } = require('../telegram/miniapp-auth');
+      const v = await validateInitData(telegramInitData);
+      if (v.ok && v.user && v.user.id) {
+        channel = 'miniapp';
+        // Link this Telegram id to the checkout customer (if not already linked elsewhere).
+        await query(
+          `UPDATE users SET telegram_id = $2,
+                 telegram_username = COALESCE($3, telegram_username), updated_at = now()
+             WHERE id = $1 AND telegram_id IS NULL
+               AND NOT EXISTS (SELECT 1 FROM users u2 WHERE u2.telegram_id = $2)`,
+          [customer.id, String(v.user.id), v.user.username || null]
+        );
+      }
+    } catch (e) { console.warn('[web-checkout telegram link]', e.message); }
+  }
+
   const expireMinutes = await getExpireMinutes();
 
   try {
     const result = await tx(async (client) => {
       const o = await client.query(
-        `INSERT INTO orders (order_no, user_id, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token, expires_at)
-         VALUES ($1,$2,$3,$4,$5,'pending_payment','pending',$6, now() + ($7 || ' minutes')::interval) RETURNING *`,
-        [orderNo, customer.id, normEmail, customerWhatsapp || null, uniqueAmount, accessToken, String(expireMinutes)]
+        `INSERT INTO orders (order_no, user_id, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token, expires_at, channel)
+         VALUES ($1,$2,$3,$4,$5,'pending_payment','pending',$6, now() + ($7 || ' minutes')::interval, $8) RETURNING *`,
+        [orderNo, customer.id, normEmail, customerWhatsapp || null, uniqueAmount, accessToken, String(expireMinutes), channel]
       );
       const order = o.rows[0];
       for (const ln of lines) {
@@ -450,7 +471,10 @@ async function payhookHandler(req, res) {
 
       await client.query("UPDATE payments SET status='paid', paid_at=now(), raw_payload=$2 WHERE order_id=$1", [order.id, payload]);
       await client.query("UPDATE orders SET payment_status='paid', status='paid', paid_at=now(), updated_at=now() WHERE id=$1", [order.id]);
-      await deliverOrder(client, order.id);
+      const isTopup = order.order_kind === 'topup';
+      if (!isTopup) {
+        await deliverOrder(client, order.id);
+      }
       await client.query("INSERT INTO audit_logs (action, entity_type, entity_id, metadata) VALUES ('payment.paid','order',$1,$2)", [order.id, payload]);
       // Product names for the notification (best-effort).
       const prod = await client.query(
@@ -462,12 +486,28 @@ async function payhookHandler(req, res) {
       return {
         matched: true,
         orderNo: order.order_no,
-        paid: { orderNo: order.order_no, amount: order.total_amount, email: order.buyer_email, products: prod.rows[0]?.names || '' },
+        orderId: order.id,
+        isTopup,
+        userId: order.user_id,
+        paid: { orderNo: order.order_no, amount: order.total_amount, email: order.buyer_email, products: prod.rows[0]?.names || '', channel: order.channel },
       };
     });
 
     if (result.reason === 'ambiguous') return res.json({ status: 'ambiguous', matching_count: result.count });
     if (!result.matched) return res.json({ status: 'no_match', reason: result.reason || 'no_match' });
+
+    // Post-commit side effects (non-blocking; never affect webhook response).
+    if (result.matched && !result.already) {
+      // Top up → credit wallet; product order → pay referral bonus on first paid order.
+      try {
+        const wallet = require('../wallet.service');
+        if (result.isTopup && result.orderId) {
+          wallet.creditTopup(result.orderId).catch((e) => console.error('[payhook topup]', e.message));
+        } else if (result.orderId) {
+          wallet.payReferralBonus(result.orderId).catch((e) => console.error('[payhook referral]', e.message));
+        }
+      } catch (e) { console.error('[payhook wallet]', e.message); }
+    }
 
     // Notify admin via Telegram (non-blocking, never affects webhook response).
     if (result.paid) {
