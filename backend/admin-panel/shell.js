@@ -4,6 +4,7 @@ import { session } from './api.js';
 
 const NAV = [
   { hash: '/dashboard', label: 'Dashboard', icon: '🏠' },
+  { hash: '/analytics', label: 'Analitik', icon: '📊' },
   { hash: '/products', label: 'Produk', icon: '📦' },
   { hash: '/categories', label: 'Kategori', icon: '🏷️' },
   { hash: '/orders', label: 'Pesanan', icon: '🧾' },

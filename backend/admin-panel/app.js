@@ -2,6 +2,7 @@
 import { session } from './api.js';
 import { pageLogin } from './pages/login.js';
 import { pageDashboard } from './pages/dashboard.js';
+import { pageAnalytics } from './pages/analytics.js';
 import { pageProducts } from './pages/products.js';
 import { pageCategories } from './pages/categories.js';
 import { pageOrders } from './pages/orders.js';
@@ -12,6 +13,7 @@ import { pageSettings } from './pages/settings.js';
 const ROUTES = {
   '#/login': pageLogin,
   '#/dashboard': pageDashboard,
+  '#/analytics': pageAnalytics,
   '#/products': pageProducts,
   '#/categories': pageCategories,
   '#/orders': pageOrders,
