@@ -189,6 +189,16 @@ function renderCategories(products, imageMap) {
   if (wrap) wrap.innerHTML = categories.map(categoryCard).join('');
   setText('[data-category-status]', categories.length ? `${categories.length} kategori` : 'Belum ada kategori');
   setText('[data-category-count]', String(categories.length));
+
+  // Make the search placeholder reflect real, available categories.
+  const names = categories.map((c) => text(c.name)).filter(Boolean);
+  if (names.length) {
+    const sample = names.slice(0, 3).join(', ');
+    const placeholder = `Cari ${sample}${names.length > 3 ? ', ...' : ''}`;
+    document.querySelectorAll('[data-search-input]').forEach((el) => {
+      el.setAttribute('placeholder', placeholder);
+    });
+  }
 }
 
 function renderPreview(products) {
