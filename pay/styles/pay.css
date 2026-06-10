@@ -8,7 +8,7 @@
 
 .pay-main { padding: 28px 0 48px; }
 .pay-skeleton { padding: 60px; text-align: center; color: var(--muted); }
-.pay-card { background: #fff; border: 1px solid var(--panel-line); border-radius: var(--radius-md); box-shadow: var(--shadow-1); padding: 28px; }
+.pay-card { background: var(--cds-surface); border: 1px solid var(--panel-line); border-radius: var(--radius-md); box-shadow: var(--shadow-1); padding: 28px; }
 .pay-center { text-align: center; }
 .pay-card h2 { margin: 10px 0 4px; font: 700 22px/28px var(--display); }
 .pay-card .muted { color: var(--muted); font-size: 13px; }

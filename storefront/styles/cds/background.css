@@ -6,8 +6,8 @@
   overflow: hidden;
   pointer-events: none;
   background:
-    radial-gradient(circle at 15% 12%, rgba(48,127,226,.10), transparent 30rem),
-    radial-gradient(circle at 85% 18%, rgba(244,98,0,.06), transparent 26rem),
+    radial-gradient(circle at 15% 12%, var(--cds-bg-path), transparent 30rem),
+    radial-gradient(circle at 85% 18%, var(--cds-bg-path-accent), transparent 26rem),
     linear-gradient(180deg, var(--cds-bg-base-1) 0%, var(--cds-bg-base-2) 55%, var(--cds-bg-base-1) 100%);
 }
 .cds-bg svg { position: absolute; inset: 0; width: 100%; height: 100%; }

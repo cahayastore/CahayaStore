@@ -58,7 +58,7 @@
 .brand-copy strong { display: block; color: var(--text); font: 900 18px/1.1 var(--display); letter-spacing: -.03em; }
 .brand-copy small { display: block; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .mobile-nav { display: none; }
-.footer { margin-top: 32px; padding: 36px 0 18px; border-top: 1px solid var(--panel-line); background: #fff; }
+.footer { margin-top: 32px; padding: 36px 0 18px; border-top: 1px solid var(--panel-line); background: var(--cds-surface); }
 .footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1.2fr; gap: 34px; }
 .footer h4 { margin: 0 0 12px; font-size: 15px; color: var(--text); }
 .footer p, .footer a { color: var(--muted); font-size: 13px; line-height: 1.8; }
@@ -73,7 +73,7 @@
     position: fixed; left: 14px; right: 14px; bottom: 12px; z-index: 50;
     height: 62px; display: grid; grid-template-columns: repeat(5, 1fr);
     border: 1px solid var(--panel-line); border-radius: var(--radius-md);
-    background: #fff; box-shadow: var(--shadow-2);
+    background: var(--cds-surface); box-shadow: var(--shadow-2);
   }
   .mobile-nav a { display: grid; place-items: center; gap: 2px; color: var(--muted); font-size: 9px; font-weight: 700; line-height: 1; padding: 7px 2px; }
   .mobile-nav a strong { font-size: 17px; line-height: 1; }

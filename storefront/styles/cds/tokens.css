@@ -59,4 +59,51 @@
   --cds-bg-base-2: #eaf2fc;
   --cds-bg-path: rgba(48, 127, 226, 0.10);
   --cds-bg-path-accent: rgba(244, 98, 0, 0.07);
+
+  /* Navbar capsule (themable) */
+  --cds-nav-surface: rgba(255, 255, 255, .96);
+  --cds-nav-border: rgba(148, 163, 184, .28);
+}
+
+/* ── Dark theme ─────────────────────────────────────────────
+   Activated by data-theme="dark" on <html>. Set early by
+   cds-theme.js to avoid a flash of the light theme. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --cds-primary: #4f93e8;
+  --cds-primary-hover: #5c9eef;
+  --cds-primary-dark: #3b7fd6;
+  --cds-primary-active: #336fbf;
+  --cds-primary-soft: #1b2b44;
+  --cds-primary-tint: #24385a;
+
+  --cds-accent: #ff7d2e;
+  --cds-accent-soft: #3a2415;
+
+  --cds-text: #e8edf5;
+  --cds-text-secondary: #b3bccb;
+  --cds-text-muted: #7c899c;
+  --cds-border: #2a3342;
+  --cds-border-strong: #3a4556;
+
+  --cds-bg: #0d1320;
+  --cds-surface: #151c2b;
+  --cds-surface-soft: #1b2434;
+
+  --cds-success: #34d399;
+  --cds-warning: #fbbf24;
+  --cds-danger: #f87171;
+
+  --cds-shadow-1: rgba(0, 0, 0, 0.4) 0px 2px 4px 0px, rgba(0, 0, 0, 0.3) 0px 6px 16px 0px;
+  --cds-shadow-2: rgba(0, 0, 0, 0.45) 0px 4px 12px 0px, rgba(0, 0, 0, 0.3) 0px 4px 8px 2px;
+  --cds-shadow-3: 0px 20px 25px -5px rgba(0, 0, 0, 0.55), 0px 10px 10px -5px rgba(0, 0, 0, 0.3);
+
+  --cds-bg-base-1: #0d1320;
+  --cds-bg-base-2: #121a2a;
+  --cds-bg-path: rgba(79, 147, 232, 0.12);
+  --cds-bg-path-accent: rgba(255, 125, 46, 0.08);
+
+  --cds-nav-surface: rgba(21, 28, 43, .92);
+  --cds-nav-border: rgba(58, 69, 86, .6);
 }

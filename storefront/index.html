@@ -8,9 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&family=Exo:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/cahaya-design-system.css?v=20260610-nav" />
+  <link rel="stylesheet" href="/styles/cahaya-design-system.css?v=20260610-dark" />
+  <script src="/scripts/cds-theme.js?v=20260610-dark"></script>
   <link rel="stylesheet" href="/styles/layout.css?v=20260610-nav" />
-  <link rel="stylesheet" href="/styles/home.css?v=20260610-railhead" />
+  <link rel="stylesheet" href="/styles/home.css?v=20260610-cat" />
   <script type="module" src="/scripts/cds-background.js?v=20260609-1"></script>
 </head>
 <body>
@@ -36,6 +37,10 @@
           <a class="cds-nav__icon cds-nav__icon--cart" href="https://pay.cahayastore.me" aria-label="Keranjang / Cek pesanan" title="Cek pesanan">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
           </a>
+          <button type="button" class="cds-nav__icon cds-nav__theme" data-theme-toggle aria-label="Ganti tema" aria-pressed="false" title="Mode gelap">
+            <svg class="cds-nav__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+            <svg class="cds-nav__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+          </button>
         </div>
         <span class="cds-nav__divider"></span>
         <div class="cds-nav__group">
@@ -110,6 +115,6 @@
 
   <nav class="mobile-nav" aria-label="Navigasi mobile"><a class="active" href="#home"><strong>⌂</strong>Beranda</a><a href="#categories"><strong>▦</strong>Kategori</a><a href="#products"><strong>▣</strong>Produk</a><a href="https://pay.cahayastore.me/riwayat"><strong>♙</strong>Riwayat</a></nav>
   <script type="module" src="/scripts/banner.js?v=20260609-banner"></script>
-  <script type="module" src="/scripts/catalog.js?v=20260610-nav"></script>
+  <script type="module" src="/scripts/catalog.js?v=20260610-cat"></script>
 </body>
 </html>

@@ -142,13 +142,15 @@ function productCard(product) {
 }
 
 function categoryCard(category) {
-  const mark = category.imageUrl
-    ? `<div class="mark mark--img"><img src="${escapeHtml(category.imageUrl)}" alt="${escapeHtml(category.name)}" loading="lazy" /></div>`
-    : `<div class="mark">${escapeHtml(category.name[0]?.toUpperCase() || 'P')}</div>`;
-  return `<a class="category-card" href="#products" data-category-link="${escapeHtml(category.name.toLowerCase())}" aria-label="Kategori ${escapeHtml(category.name)}">
-    ${mark}
-    <b>${escapeHtml(category.name)}</b>
-    <small>${category.count} produk</small>
+  const inner = category.imageUrl
+    ? `<img class="category-card__img" src="${escapeHtml(category.imageUrl)}" alt="${escapeHtml(category.name)}" loading="lazy" />`
+    : `<span class="category-card__fallback">${escapeHtml(category.name[0]?.toUpperCase() || 'P')}</span>`;
+  return `<a class="category-card${category.imageUrl ? ' category-card--img' : ''}" href="#products" data-category-link="${escapeHtml(category.name.toLowerCase())}" aria-label="Kategori ${escapeHtml(category.name)}">
+    ${inner}
+    <span class="category-card__overlay">
+      <b>${escapeHtml(category.name)}</b>
+      <small>${category.count} produk</small>
+    </span>
   </a>`;
 }
 
