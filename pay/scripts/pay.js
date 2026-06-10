@@ -40,7 +40,8 @@ function route() {
   const payment = path.match(/\/payment\/([^/?#]+)/i);
   const order = path.match(/\/order\/([^/?#]+)/i);
   const params = new URLSearchParams(location.search);
-  if (path.match(/\/riwayat\b/i) || params.get('view') === 'history') return { view: 'history' };
+  if (path.match(/\/login\b/i)) return { view: 'login' };
+  if (path.match(/\/akun\b/i) || path.match(/\/riwayat\b/i) || params.get('view') === 'history') return { view: 'history' };
   if (payment) return { view: 'payment', orderNo: decodeURIComponent(payment[1]), token: params.get('t') };
   if (order) return { view: 'order', orderNo: decodeURIComponent(order[1]), token: params.get('t') };
   // Direct buy: /?product=<id> (legacy) or /?buy=<id>
@@ -279,32 +280,48 @@ async function renderHistory() {
   if (!s.accessToken && !s.webSessionToken) {
     root().innerHTML = `<div class="pay-card pay-center">
       <h2>Riwayat Belanja</h2>
-      <p class="muted">Belum ada sesi. Lakukan pembelian dulu untuk membuat akun otomatis.</p>
-      <a class="btn btn-primary" href="https://cahayastore.me/">Ke Toko</a>
+      <p class="muted">Masuk dengan akun kamu untuk melihat riwayat & produk yang dibeli.</p>
+      <a class="btn btn-primary" href="/login">Masuk Akun</a>
+      <p class="pay-hint">Akun dibuat otomatis saat belanja pertama. Buat password di halaman pesanan agar bisa login di sini.</p>
     </div>`;
     return;
   }
-  root().innerHTML = `<div class="pay-card"><h2>Riwayat Belanja</h2><p class="muted" data-h>Memuat…</p></div>`;
+  const who = s.user?.email ? `<span class="pay-hist-who">${esc(s.user.email)}</span>` : '';
+  root().innerHTML = `<div class="pay-card">
+    <div class="pay-hist-head"><h2>Riwayat Belanja</h2>${who}</div>
+    <p class="muted" data-h>Memuat…</p>
+  </div>`;
   try {
     const ws = s.webSessionToken ? `?webSessionToken=${encodeURIComponent(s.webSessionToken)}` : '';
     const r = await api(`/public/web-checkout/orders${ws}`, { headers: authHeaders() });
     const orders = r.data || [];
     const host = root().querySelector('.pay-card');
+    const head = `<div class="pay-hist-head"><h2>Riwayat Belanja</h2>${who}</div>`;
     if (!orders.length) {
-      host.innerHTML = '<h2>Riwayat Belanja</h2><p class="muted">Belum ada pesanan.</p>';
+      host.innerHTML = head + '<p class="muted">Belum ada pesanan.</p>' + logoutLink();
+      bindLogout();
       return;
     }
-    host.innerHTML = '<h2>Riwayat Belanja</h2>' + orders.map((o) => `
+    host.innerHTML = head + orders.map((o) => `
       <a class="pay-hist-row" href="/order/${encodeURIComponent(o.orderId)}?t=${encodeURIComponent(o.token || '')}">
         <div class="pay-hist-main">
           <span class="pay-hist-name">${esc((o.products || []).join(', ') || o.orderId)}</span>
           <span class="pay-hist-meta">${esc(o.orderId)} · ${rupiah(o.amount)}</span>
         </div>
         <span class="pay-badge ${PAID.includes(o.paymentStatus) ? 'ok' : 'wait'}">${PAID.includes(o.paymentStatus) ? 'Lunas' : 'Menunggu'}</span>
-      </a>`).join('');
+      </a>`).join('') + logoutLink();
+    bindLogout();
   } catch (e) {
     root().querySelector('[data-h]').textContent = e.message;
   }
+}
+
+function logoutLink() {
+  return '<div class="pay-account-links"><a href="#" data-logout>Keluar</a></div>';
+}
+function bindLogout() {
+  const a = root().querySelector('[data-logout]');
+  if (a) a.addEventListener('click', (e) => { e.preventDefault(); clearSession(); location.replace('/login'); });
 }
 
 function errCard(msg) {
@@ -324,9 +341,52 @@ function renderEmpty() {
   </div>`;
 }
 
+/* ── Login (for customers who already set a password) ── */
+function renderLogin() {
+  root().innerHTML = `<div class="pay-card pay-center">
+    <h2>Masuk Akun</h2>
+    <p class="muted">Login untuk melihat riwayat & produk yang sudah dibeli.</p>
+    <div class="pay-login">
+      <input type="email" placeholder="Email" data-le />
+      <input type="password" placeholder="Password" data-lp />
+      <button class="btn btn-primary" data-lbtn>Masuk</button>
+      <div class="pay-err" data-lmsg></div>
+    </div>
+    <p class="pay-hint">Belum punya akun? Akun dibuat otomatis saat kamu belanja pertama kali, lalu buat password di halaman pesanan.</p>
+  </div>`;
+  const email = root().querySelector('[data-le]');
+  const pass = root().querySelector('[data-lp]');
+  const btn = root().querySelector('[data-lbtn]');
+  const msg = root().querySelector('[data-lmsg]');
+  const saved = getSession();
+  if (saved.user?.email) email.value = saved.user.email;
+  async function go() {
+    const e = text(email.value); const p = String(pass.value || '');
+    if (!e || !p) { msg.textContent = 'Email & password wajib diisi.'; return; }
+    btn.disabled = true; btn.textContent = 'Masuk…'; msg.textContent = '';
+    try {
+      const r = await api('/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: e, password: p }),
+      });
+      // login returns { token, user }. Store as gateway session.
+      const sess = getSession();
+      sess.accessToken = r.token; sess.user = r.user; sess.passwordSet = true;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+      location.replace('/riwayat');
+    } catch (err) {
+      msg.textContent = err.message || 'Login gagal.';
+      btn.disabled = false; btn.textContent = 'Masuk';
+    }
+  }
+  btn.addEventListener('click', go);
+  pass.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') go(); });
+}
+
 const r = route();
 if (r.view === 'create') createOrder(r.productId, r.qty);
 else if (r.view === 'payment') renderPayment(r.orderNo, r.token);
 else if (r.view === 'order') renderOrder(r.orderNo, r.token);
 else if (r.view === 'history') renderHistory();
+else if (r.view === 'login') renderLogin();
 else renderEmpty();
