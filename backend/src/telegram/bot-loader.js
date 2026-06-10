@@ -21,6 +21,11 @@ function buildBot(token) {
       'Gunakan /products untuk lihat katalog terbaru.'
     );
   });
+  // Helper for admins to discover the chat ID to use for notifications.
+  bot.command('chatid', async (ctx) => {
+    await ctx.reply(`Chat ID kamu: <code>${ctx.chat.id}</code>\nSalin ini ke kolom "Admin Chat ID" di Pengaturan.`,
+      { parse_mode: 'HTML' });
+  });
   bot.command('products', async (ctx) => {
     try {
       const r = await query(
@@ -83,6 +88,7 @@ async function registerWebhook(botId = DEFAULT_BOT_ID) {
     await bot.api.setMyCommands([
       { command: 'start', description: 'Mulai & info toko' },
       { command: 'products', description: 'Lihat katalog terbaru' },
+      { command: 'chatid', description: 'Tampilkan Chat ID (untuk admin)' },
     ]);
   } catch (e) { console.warn('[tg setMyCommands]', e.message); }
 
@@ -100,5 +106,42 @@ async function deleteWebhook(botId = DEFAULT_BOT_ID) {
 
 function clearCache() { bots.clear(); }
 
-module.exports = { handleUpdate, registerWebhook, deleteWebhook, clearCache, DEFAULT_BOT_ID };
+/* Send a plain message to a chat via the configured bot. Best-effort. */
+async function sendMessage(chatId, text, opts = {}, botId = DEFAULT_BOT_ID) {
+  if (!chatId) return { ok: false, reason: 'no_chat_id' };
+  const bot = await getOrLoadBot(botId);
+  await bot.api.sendMessage(String(chatId), text, { parse_mode: 'HTML', ...opts });
+  return { ok: true };
+}
+
+/* Notify the admin chat that an order has been paid. Never throws. */
+async function notifyOrderPaid(order) {
+  try {
+    const cfg = await getSetting(KEYS.TELEGRAM_BOT);
+    if (!cfg || !cfg.token || !cfg.admin_chat_id) return { ok: false, reason: 'not_configured' };
+    const amount = Number(order.amount || order.total_amount || 0).toLocaleString('id-ID');
+    const lines = [
+      '🟢 <b>Pembayaran diterima</b>',
+      `Order: <code>${escapeHtml(order.orderNo || order.order_no || '-')}</code>`,
+      `Jumlah: <b>Rp${amount}</b>`,
+    ];
+    if (order.email || order.buyer_email) lines.push(`Email: ${escapeHtml(order.email || order.buyer_email)}`);
+    if (order.products) lines.push(`Produk: ${escapeHtml(order.products)}`);
+    await sendMessage(cfg.admin_chat_id, lines.join('\n'));
+    return { ok: true };
+  } catch (e) {
+    console.error('[tg notifyOrderPaid]', e.message);
+    return { ok: false, error: e.message };
+  }
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+module.exports = {
+  handleUpdate, registerWebhook, deleteWebhook, clearCache,
+  sendMessage, notifyOrderPaid, DEFAULT_BOT_ID,
+};
 

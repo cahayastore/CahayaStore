@@ -452,11 +452,31 @@ async function payhookHandler(req, res) {
       await client.query("UPDATE orders SET payment_status='paid', status='paid', paid_at=now(), updated_at=now() WHERE id=$1", [order.id]);
       await deliverOrder(client, order.id);
       await client.query("INSERT INTO audit_logs (action, entity_type, entity_id, metadata) VALUES ('payment.paid','order',$1,$2)", [order.id, payload]);
-      return { matched: true, orderNo: order.order_no };
+      // Product names for the notification (best-effort).
+      const prod = await client.query(
+        `SELECT COALESCE(string_agg(p.name, ', '), '') AS names
+           FROM order_items oi LEFT JOIN products p ON p.id = oi.product_id
+          WHERE oi.order_id = $1`,
+        [order.id]
+      );
+      return {
+        matched: true,
+        orderNo: order.order_no,
+        paid: { orderNo: order.order_no, amount: order.total_amount, email: order.buyer_email, products: prod.rows[0]?.names || '' },
+      };
     });
 
     if (result.reason === 'ambiguous') return res.json({ status: 'ambiguous', matching_count: result.count });
     if (!result.matched) return res.json({ status: 'no_match', reason: result.reason || 'no_match' });
+
+    // Notify admin via Telegram (non-blocking, never affects webhook response).
+    if (result.paid) {
+      try {
+        require('../telegram/bot-loader').notifyOrderPaid(result.paid)
+          .catch((e) => console.error('[payhook notify]', e.message));
+      } catch (e) { console.error('[payhook notify load]', e.message); }
+    }
+
     return res.json({ status: 'confirmed', invoice_number: result.orderNo, already: !!result.already });
   } catch (e) {
     console.error('[payhook]', e);

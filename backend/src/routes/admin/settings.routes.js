@@ -78,4 +78,19 @@ router.post('/telegram/register', async (_req, res) => {
   }
 });
 
+/* Send a test notification to the configured admin chat. */
+router.post('/telegram/test', async (_req, res) => {
+  try {
+    const cfg = await getSetting(KEYS.TELEGRAM_BOT);
+    if (!cfg || !cfg.token) return res.status(400).json({ success: false, message: 'Bot belum dikonfigurasi.' });
+    if (!cfg.admin_chat_id) return res.status(400).json({ success: false, message: 'Admin Chat ID belum diisi.' });
+    const loader = require('../../telegram/bot-loader');
+    await loader.sendMessage(cfg.admin_chat_id,
+      '🔔 <b>Tes notifikasi Cahaya Store</b>\nJika kamu menerima pesan ini, notifikasi pembayaran sudah aktif.');
+    res.json({ success: true });
+  } catch (e) {
+    res.status(502).json({ success: false, message: e.message });
+  }
+});
+
 module.exports = router;

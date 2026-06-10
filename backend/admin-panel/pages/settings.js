@@ -10,7 +10,9 @@ const SECTIONS = [
     fields: [
       { name: 'token', label: 'Bot Token', type: 'password' },
       { name: 'username', label: 'Bot Username (opsional)' },
-      { name: 'webhook_secret', label: 'Webhook Secret', type: 'password' }
+      { name: 'webhook_secret', label: 'Webhook Secret', type: 'password' },
+      { name: 'admin_chat_id', label: 'Admin Chat ID (notifikasi pembayaran)',
+        hint: 'Chat/grup ID tujuan notifikasi order lunas. Chat ke bot lalu cek via /start, atau gunakan ID grup (diawali -100…). Kosongkan untuk menonaktifkan notifikasi.' }
     ]
   },
   {
@@ -119,7 +121,7 @@ function buildSection(section) {
 /* Telegram webhook status + manual register controls. */
 function buildTelegramPanel(form) {
   const box = el('div', { class: 'tg-panel' });
-  const statusLine = el('div', { class: 'tg-status', 'data-tg-status' }, 'Status webhook: memuat…');
+  const statusLine = el('div', { class: 'tg-status', 'data-tg-status': '1' }, 'Status webhook: memuat…');
   const regBtn = el('button', { class: 'btn', type: 'button' }, 'Daftarkan / Refresh Webhook');
   regBtn.addEventListener('click', async () => {
     regBtn.disabled = true; const prev = regBtn.textContent; regBtn.textContent = 'Mendaftarkan…';
@@ -135,6 +137,19 @@ function buildTelegramPanel(form) {
   });
   box.appendChild(statusLine);
   box.appendChild(regBtn);
+  const testBtn = el('button', { class: 'btn', type: 'button' }, 'Tes Notifikasi');
+  testBtn.addEventListener('click', async () => {
+    testBtn.disabled = true; const prev = testBtn.textContent; testBtn.textContent = 'Mengirim…';
+    try {
+      await api('/api/admin/telegram/test', { method: 'POST' });
+      toast('Pesan tes terkirim ke admin chat.', 'ok');
+    } catch (e) {
+      toast('Gagal kirim tes: ' + e.message, 'err');
+    } finally {
+      testBtn.disabled = false; testBtn.textContent = prev;
+    }
+  });
+  box.appendChild(testBtn);
   setTimeout(() => refreshTelegramStatus(form), 200);
   return box;
 }
