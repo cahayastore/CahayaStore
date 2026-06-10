@@ -199,20 +199,27 @@ function renderPreview(products) {
 }
 
 function bindSearch() {
-  const input = document.querySelector('[data-search-input]');
-  const form = document.querySelector('[data-search-form]');
-  const filter = () => {
-    const query = text(input?.value).toLowerCase();
+  const inputs = Array.from(document.querySelectorAll('[data-search-input]'));
+  const forms = Array.from(document.querySelectorAll('[data-search-form]'));
+  const filter = (value) => {
+    const query = text(value).toLowerCase();
+    // Keep all search inputs (desktop + mobile) in sync.
+    inputs.forEach((el) => { if (el.value !== value) el.value = value; });
     document.querySelectorAll('[data-product-card]').forEach((card) => {
       const haystack = `${card.dataset.name || ''} ${card.dataset.category || ''}`;
       card.hidden = query ? !haystack.includes(query) : false;
     });
   };
-  input?.addEventListener('input', filter);
-  form?.addEventListener('submit', (event) => {
-    event.preventDefault();
-    document.querySelector('#products')?.scrollIntoView({ behavior: 'smooth' });
-    filter();
+  inputs.forEach((input) => {
+    input.addEventListener('input', () => filter(input.value));
+  });
+  forms.forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const input = form.querySelector('[data-search-input]');
+      document.querySelector('#products')?.scrollIntoView({ behavior: 'smooth' });
+      filter(input ? input.value : '');
+    });
   });
 }
 
