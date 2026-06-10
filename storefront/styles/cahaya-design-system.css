@@ -11,9 +11,10 @@
      components.css  — buttons, icon-pill
      background.css  — global animated background paths layer
    ============================================================ */
-@import url('/styles/cds/tokens.css');
-@import url('/styles/cds/aliases.css');
-@import url('/styles/cds/base.css');
-@import url('/styles/cds/layout.css');
-@import url('/styles/cds/components.css');
-@import url('/styles/cds/background.css');
+@import url('/styles/cds/tokens.css?v=20260610-nav');
+@import url('/styles/cds/aliases.css?v=20260610-nav');
+@import url('/styles/cds/base.css?v=20260610-nav');
+@import url('/styles/cds/layout.css?v=20260610-nav');
+@import url('/styles/cds/components.css?v=20260610-nav');
+@import url('/styles/cds/navbar.css?v=20260610-nav');
+@import url('/styles/cds/background.css?v=20260610-nav');

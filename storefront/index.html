@@ -8,53 +8,53 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&family=Exo:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/cahaya-design-system.css?v=20260609-2" />
-  <link rel="stylesheet" href="/styles/layout.css?v=20260610-navcapsule" />
+  <link rel="stylesheet" href="/styles/cahaya-design-system.css?v=20260610-nav" />
+  <link rel="stylesheet" href="/styles/layout.css?v=20260610-nav" />
   <link rel="stylesheet" href="/styles/home.css?v=20260610-railhead" />
   <script type="module" src="/scripts/cds-background.js?v=20260609-1"></script>
 </head>
 <body>
-  <header class="nav">
-    <div class="container nav-inner">
-      <a class="nav-logo" href="/" aria-label="Cahaya Store">
-        <img class="brand-full-logo" src="/assets/logo-light.png?v=3" alt="Cahaya Store" />
+  <header class="cds-nav">
+    <div class="cds-nav__inner">
+      <a class="cds-nav__logo" href="/" aria-label="Cahaya Store">
+        <img src="/assets/logo-light.png?v=3" alt="Cahaya Store" />
       </a>
 
-      <div class="nav-search-wrap">
-        <form class="nav-search" role="search" data-search-form>
+      <div class="cds-nav__search-wrap">
+        <form class="cds-nav__search" role="search" data-search-form action="/" method="get">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
           <input type="search" name="q" placeholder="Cari produk digital, template, lisensi..." autocomplete="off" data-search-input />
-          <button type="submit" class="nav-search-btn" aria-label="Cari">Cari</button>
+          <button type="submit" class="cds-nav__search-btn" aria-label="Cari">Cari</button>
         </form>
       </div>
 
-      <div class="nav-actions">
-        <div class="nav-action-group">
-          <a class="nav-icon" href="https://pay.cahayastore.me/riwayat" aria-label="Riwayat pesanan" title="Riwayat pesanan">
+      <div class="cds-nav__actions">
+        <div class="cds-nav__group">
+          <a class="cds-nav__icon" href="https://pay.cahayastore.me/riwayat" aria-label="Riwayat pesanan" title="Riwayat pesanan">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
           </a>
-          <a class="nav-icon nav-icon--cart" href="https://pay.cahayastore.me" aria-label="Keranjang / Cek pesanan" title="Cek pesanan">
+          <a class="cds-nav__icon cds-nav__icon--cart" href="https://pay.cahayastore.me" aria-label="Keranjang / Cek pesanan" title="Cek pesanan">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
           </a>
         </div>
-        <span class="nav-divider"></span>
-        <div class="nav-action-group">
-          <a class="nav-auth-combo" href="https://pay.cahayastore.me/login" aria-label="Masuk atau Daftar">
-            <span class="nav-auth-combo__icon">
+        <span class="cds-nav__divider"></span>
+        <div class="cds-nav__group">
+          <a class="cds-nav__auth" href="https://pay.cahayastore.me/login" aria-label="Masuk atau Daftar">
+            <span class="cds-nav__auth-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             </span>
-            <span class="nav-auth-combo__divider" aria-hidden="true"></span>
-            <span class="nav-auth-combo__text">
-              <span class="nav-auth-combo__eyebrow">Masuk</span>
-              <span class="nav-auth-combo__label">Daftar</span>
+            <span class="cds-nav__auth-sep" aria-hidden="true"></span>
+            <span class="cds-nav__auth-text">
+              <span class="cds-nav__auth-eyebrow">Masuk</span>
+              <span class="cds-nav__auth-label">Daftar</span>
             </span>
           </a>
         </div>
       </div>
     </div>
 
-    <div class="nav-mobile-search">
-      <form class="nav-search" role="search" data-search-form>
+    <div class="cds-nav__mobile-search">
+      <form class="cds-nav__search" role="search" data-search-form action="/" method="get">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
         <input type="search" name="q" placeholder="Cari produk digital..." autocomplete="off" data-search-input />
       </form>
@@ -110,6 +110,6 @@
 
   <nav class="mobile-nav" aria-label="Navigasi mobile"><a class="active" href="#home"><strong>⌂</strong>Beranda</a><a href="#categories"><strong>▦</strong>Kategori</a><a href="#products"><strong>▣</strong>Produk</a><a href="https://pay.cahayastore.me/riwayat"><strong>♙</strong>Riwayat</a></nav>
   <script type="module" src="/scripts/banner.js?v=20260609-banner"></script>
-  <script type="module" src="/scripts/catalog.js?v=20260610-dualsearch"></script>
+  <script type="module" src="/scripts/catalog.js?v=20260610-nav"></script>
 </body>
 </html>

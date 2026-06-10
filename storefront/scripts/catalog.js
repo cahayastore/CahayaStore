@@ -221,6 +221,13 @@ function bindSearch() {
       filter(input ? input.value : '');
     });
   });
+
+  // Apply an initial query from the URL (?q=) so search works across pages.
+  const initialQuery = new URLSearchParams(location.search).get('q');
+  if (initialQuery) {
+    filter(initialQuery);
+    document.querySelector('#products')?.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 function bindCategoryFilter() {

@@ -1,5 +1,7 @@
 /* CDS — Layout primitives */
-.container { width: min(var(--cds-max), calc(100% - 96px)); margin: 0 auto; }
+/* Container width tracks the floating navbar capsule (max 1180, 16px side gap)
+   so page content aligns left/right with the navbar on every breakpoint. */
+.container { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
 .gradient-text { color: var(--cds-primary); }
 .section-title { margin: 0 0 18px; font: 700 24px/36px var(--cds-font-display); text-align: center; }
 .panel {
@@ -10,9 +12,9 @@
 }
 
 @media (max-width: 1023px) {
-  .container { width: min(100% - 48px, 1000px); }
+  .container { width: calc(100% - 32px); }
 }
 @media (max-width: 760px) {
-  .container { width: calc(100% - 32px); }
+  .container { width: calc(100% - 20px); }
   body { padding-bottom: 88px; }
 }
