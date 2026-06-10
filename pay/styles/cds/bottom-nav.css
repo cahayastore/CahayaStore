@@ -1,0 +1,97 @@
+/* ============================================================
+   CDS — Mobile bottom navigation (dock-style clay pill)
+   Mirrors Marketku's bottom nav: floating pill, items are
+   icon-only when idle and expand with a label when active.
+   Hidden on desktop, shown ≤760px.
+   ============================================================ */
+
+.mk-bottom-nav { display: none; }
+
+@media (max-width: 760px) {
+  .mk-bottom-nav {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 190;
+    display: flex;
+    justify-content: center;
+    background: transparent;
+    padding: 0 0 calc(env(safe-area-inset-bottom, 0px) + 8px);
+    pointer-events: none;
+  }
+  .mk-bottom-nav__pill {
+    pointer-events: auto;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 4px;
+    padding: 7px 10px;
+    width: auto;
+    max-width: calc(100% - 16px);
+    border-radius: 22px;
+    background: var(--cds-nav-surface);
+    border: 1px solid var(--cds-nav-border);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .5),
+      0 14px 32px -12px rgba(15, 23, 42, .3);
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    box-sizing: border-box;
+  }
+  .mk-bottom-nav__item {
+    flex: 0 0 auto;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    width: 46px;
+    min-width: 46px;
+    padding: 8px 0;
+    min-height: 44px;
+    border-radius: 14px;
+    background: transparent;
+    border: 0;
+    color: var(--cds-text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+    white-space: nowrap;
+    transition:
+      width .28s cubic-bezier(0.2, 0.8, 0.2, 1),
+      padding .28s cubic-bezier(0.2, 0.8, 0.2, 1),
+      gap .28s cubic-bezier(0.2, 0.8, 0.2, 1),
+      color .18s ease, background-color .2s ease;
+  }
+  .mk-bottom-nav__item.is-active {
+    color: var(--cds-primary);
+    width: auto;
+    min-width: 96px;
+    padding: 8px 14px;
+    gap: 7px;
+    background: color-mix(in srgb, var(--cds-primary) 12%, transparent);
+  }
+  .mk-bottom-nav__icon { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+  .mk-bottom-nav__icon svg { width: 19px; height: 19px; }
+  .mk-bottom-nav__label {
+    display: inline-block;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-family: var(--cds-font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    line-height: 1;
+    color: var(--cds-primary);
+    transition:
+      max-width .28s cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity .22s cubic-bezier(0.2, 0.8, 0.2, 1) .06s;
+  }
+  .mk-bottom-nav__item.is-active .mk-bottom-nav__label { max-width: 8rem; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-bottom-nav__item, .mk-bottom-nav__label { transition: none; }
+}

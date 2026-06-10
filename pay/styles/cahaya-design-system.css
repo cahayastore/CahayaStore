@@ -16,5 +16,6 @@
 @import url('/styles/cds/base.css?v=20260610-dark');
 @import url('/styles/cds/layout.css?v=20260610-dark');
 @import url('/styles/cds/components.css?v=20260610-dark');
-@import url('/styles/cds/navbar.css?v=20260610-dark');
+@import url('/styles/cds/navbar.css?v=20260610-botnav');
+@import url('/styles/cds/bottom-nav.css?v=20260610-botnav');
 @import url('/styles/cds/background.css?v=20260610-dark');

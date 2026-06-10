@@ -23,8 +23,8 @@
   align-items: center;
   gap: 14px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, .96);
-  border: 1px solid rgba(148, 163, 184, .28);
+  background: var(--cds-nav-surface);
+  border: 1px solid var(--cds-nav-border);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, .6),
     0 1px 1px rgba(15, 23, 42, .05),
@@ -90,6 +90,12 @@
 .cds-nav__icon svg { width: 18px; height: 18px; }
 .cds-nav__icon--cart svg { width: 20px; height: 20px; }
 
+/* Theme toggle: show moon in light mode, sun in dark mode. */
+.cds-nav__theme .cds-nav__sun { display: none; }
+.cds-nav__theme .cds-nav__moon { display: block; }
+:root[data-theme="dark"] .cds-nav__theme .cds-nav__sun { display: block; }
+:root[data-theme="dark"] .cds-nav__theme .cds-nav__moon { display: none; }
+
 .cds-nav__divider { width: 1px; height: 26px; background: var(--cds-border); }
 
 .cds-nav__auth {
@@ -138,7 +144,8 @@
   .cds-nav__inner > .cds-nav__search-wrap { display: none; }
   .cds-nav__actions { margin-left: auto; gap: 4px; }
   .cds-nav__divider { display: none; }
-  .cds-nav__auth { height: 34px; padding: 0 11px 0 7px; }
+  /* Masuk/Daftar hidden on mobile — login lives in the bottom nav / pay app. */
+  .cds-nav__auth { display: none; }
   .cds-nav__mobile-search { display: block; width: calc(100% - 20px); margin: 8px auto 0; padding: 0; }
-  .cds-nav__mobile-search .cds-nav__search { max-width: none; height: 42px; min-height: 42px; border-radius: 14px; border: 1px solid rgba(148, 163, 184, .28); background: rgba(255, 255, 255, .96); box-shadow: 0 10px 24px -14px rgba(15, 23, 42, .22); }
+  .cds-nav__mobile-search .cds-nav__search { max-width: none; height: 42px; min-height: 42px; border-radius: 14px; border: 1px solid var(--cds-nav-border); background: var(--cds-nav-surface); box-shadow: 0 10px 24px -14px rgba(15, 23, 42, .22); }
 }

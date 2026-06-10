@@ -144,7 +144,8 @@
   .cds-nav__inner > .cds-nav__search-wrap { display: none; }
   .cds-nav__actions { margin-left: auto; gap: 4px; }
   .cds-nav__divider { display: none; }
-  .cds-nav__auth { height: 34px; padding: 0 11px 0 7px; }
+  /* Masuk/Daftar hidden on mobile — login lives in the bottom nav / pay app. */
+  .cds-nav__auth { display: none; }
   .cds-nav__mobile-search { display: block; width: calc(100% - 20px); margin: 8px auto 0; padding: 0; }
   .cds-nav__mobile-search .cds-nav__search { max-width: none; height: 42px; min-height: 42px; border-radius: 14px; border: 1px solid var(--cds-nav-border); background: var(--cds-nav-surface); box-shadow: 0 10px 24px -14px rgba(15, 23, 42, .22); }
 }

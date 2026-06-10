@@ -8,10 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&family=Exo:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/cahaya-design-system.css?v=20260610-dark" />
+  <link rel="stylesheet" href="/styles/cahaya-design-system.css?v=20260610-botnav" />
   <script src="/scripts/cds-theme.js?v=20260610-dark"></script>
   <link rel="stylesheet" href="/styles/layout.css?v=20260610-nav" />
-  <link rel="stylesheet" href="/styles/home.css?v=20260610-banner" />
+  <link rel="stylesheet" href="/styles/home.css?v=20260610-botnav" />
   <script type="module" src="/scripts/cds-background.js?v=20260609-1"></script>
 </head>
 <body>
@@ -113,8 +113,27 @@
     <div class="container footer-bottom"><span>© 2026 Cahaya Store.</span><span class="payments">Pembayaran aman · QRIS · Transfer · E-wallet</span></div>
   </footer>
 
-  <nav class="mobile-nav" aria-label="Navigasi mobile"><a class="active" href="#home"><strong>⌂</strong>Beranda</a><a href="#categories"><strong>▦</strong>Kategori</a><a href="#products"><strong>▣</strong>Produk</a><a href="https://pay.cahayastore.me/riwayat"><strong>♙</strong>Riwayat</a></nav>
+  <nav class="mk-bottom-nav" aria-label="Navigasi mobile">
+    <div class="mk-bottom-nav__pill">
+      <a class="mk-bottom-nav__item is-active" href="#home" aria-label="Beranda">
+        <span class="mk-bottom-nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg></span>
+        <span class="mk-bottom-nav__label">Beranda</span>
+      </a>
+      <a class="mk-bottom-nav__item" href="#categories" aria-label="Kategori">
+        <span class="mk-bottom-nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span>
+        <span class="mk-bottom-nav__label">Kategori</span>
+      </a>
+      <a class="mk-bottom-nav__item" href="#products" aria-label="Produk">
+        <span class="mk-bottom-nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg></span>
+        <span class="mk-bottom-nav__label">Produk</span>
+      </a>
+      <a class="mk-bottom-nav__item" href="https://pay.cahayastore.me/riwayat" aria-label="Riwayat">
+        <span class="mk-bottom-nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v5h5"></path><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"></path><path d="M12 7v5l4 2"></path></svg></span>
+        <span class="mk-bottom-nav__label">Riwayat</span>
+      </a>
+    </div>
+  </nav>
   <script type="module" src="/scripts/banner.js?v=20260609-banner"></script>
-  <script type="module" src="/scripts/catalog.js?v=20260610-cat2"></script>
+  <script type="module" src="/scripts/catalog.js?v=20260610-botnav"></script>
 </body>
 </html>

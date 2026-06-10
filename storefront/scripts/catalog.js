@@ -265,6 +265,36 @@ function bindWishlist() {
   });
 }
 
+/* Scroll-spy: highlight the matching bottom-nav item per visible section. */
+function bindBottomNav() {
+  const items = Array.from(document.querySelectorAll('.mk-bottom-nav__item'));
+  if (!items.length) return;
+  const map = items
+    .map((a) => {
+      const href = a.getAttribute('href') || '';
+      const id = href.startsWith('#') ? href.slice(1) : null;
+      const section = id ? document.getElementById(id) : null;
+      return section ? { item: a, section } : null;
+    })
+    .filter(Boolean);
+  if (!map.length) return;
+
+  const setActive = (item) => {
+    items.forEach((a) => a.classList.toggle('is-active', a === item));
+  };
+
+  const onScroll = () => {
+    const y = window.scrollY + window.innerHeight * 0.35;
+    let current = map[0];
+    for (const entry of map) {
+      if (entry.section.offsetTop <= y) current = entry;
+    }
+    setActive(current.item);
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+}
+
 async function initCatalog() {
   try {
     const [products, categoryImages] = await Promise.all([fetchProducts(), fetchCategoryImages()]);
@@ -274,6 +304,7 @@ async function initCatalog() {
     bindSearch();
     bindCategoryFilter();
     bindWishlist();
+    bindBottomNav();
   } catch (error) {
     console.error(error);
     renderProducts([]);

@@ -92,7 +92,10 @@
   .banner-slide, .banner-slide--loading { aspect-ratio: 16 / 9; }
   .category-strip, .products-section, .why { padding: 16px; border-radius: var(--radius-md); }
   .category-grid { display: flex; overflow-x: auto; padding-bottom: 4px; }
-  .category-card { flex: 0 0 132px; width: 132px; min-width: 132px; }
+  .category-card { flex: 0 0 96px; width: 96px; min-width: 96px; }
+  .category-card__overlay { padding: 14px 7px 6px; }
+  .category-card__overlay b { font-size: 11px; }
+  .category-card__overlay small { font-size: 9.5px; }
   .product-card { flex: 0 0 142px; width: 142px; }
   .why-grid { grid-template-columns: 1fr; }
 }

@@ -69,13 +69,4 @@
 
 @media (max-width: 760px) {
   .footer-grid, .footer-bottom { grid-template-columns: 1fr; display: grid; gap: 18px; }
-  .mobile-nav {
-    position: fixed; left: 14px; right: 14px; bottom: 12px; z-index: 50;
-    height: 62px; display: grid; grid-template-columns: repeat(5, 1fr);
-    border: 1px solid var(--panel-line); border-radius: var(--radius-md);
-    background: var(--cds-surface); box-shadow: var(--shadow-2);
-  }
-  .mobile-nav a { display: grid; place-items: center; gap: 2px; color: var(--muted); font-size: 9px; font-weight: 700; line-height: 1; padding: 7px 2px; }
-  .mobile-nav a strong { font-size: 17px; line-height: 1; }
-  .mobile-nav a.active { color: var(--primary); }
 }
