@@ -105,3 +105,16 @@ if (typeof webCheckout.expireStaleOrders === 'function') {
   timer.unref();
   setTimeout(sweep, 5000).unref();
 }
+
+// Best-effort: (re)register the Telegram webhook on startup so the bot keeps
+// receiving updates after deploys/restarts. No-op if not configured.
+setTimeout(() => {
+  try {
+    const tg = require('./src/telegram/bot-loader');
+    tg.registerWebhook()
+      .then((r) => console.log(`[telegram] webhook registered → ${r.url}`))
+      .catch((e) => console.warn('[telegram] webhook not registered:', e.message));
+  } catch (e) {
+    console.warn('[telegram] loader unavailable:', e.message);
+  }
+}, 6000).unref();

@@ -93,17 +93,70 @@ function buildSection(section) {
       }
     }
     try {
-      await api('/api/admin/settings/' + section.key, {
+      const r = await api('/api/admin/settings/' + section.key, {
         method: 'PUT',
         body: JSON.stringify({ value, secret: section.secret })
       });
-      toast(`${section.title} tersimpan.`, 'ok');
+      if (r && r.telegram) {
+        if (r.telegram.ok) toast('Tersimpan & webhook Telegram terdaftar.', 'ok');
+        else toast('Tersimpan, tapi webhook gagal: ' + (r.telegram.error || r.telegram.reason || 'cek token/secret'), 'err');
+        if (section.key === 'telegram.bot') refreshTelegramStatus(form);
+      } else {
+        toast(`${section.title} tersimpan.`, 'ok');
+      }
     } catch (err) {
       toast(err.message, 'err');
     }
   });
 
+  if (section.key === 'telegram.bot') {
+    form.appendChild(buildTelegramPanel(form));
+  }
+
   return collapseCard(section.title, form, { open: false, subtitle: section.note || '' });
+}
+
+/* Telegram webhook status + manual register controls. */
+function buildTelegramPanel(form) {
+  const box = el('div', { class: 'tg-panel' });
+  const statusLine = el('div', { class: 'tg-status', 'data-tg-status' }, 'Status webhook: memuat…');
+  const regBtn = el('button', { class: 'btn', type: 'button' }, 'Daftarkan / Refresh Webhook');
+  regBtn.addEventListener('click', async () => {
+    regBtn.disabled = true; const prev = regBtn.textContent; regBtn.textContent = 'Mendaftarkan…';
+    try {
+      const r = await api('/api/admin/telegram/register', { method: 'POST' });
+      toast('Webhook terdaftar: ' + (r.url || 'ok'), 'ok');
+    } catch (e) {
+      toast('Gagal daftar webhook: ' + e.message, 'err');
+    } finally {
+      regBtn.disabled = false; regBtn.textContent = prev;
+      refreshTelegramStatus(form);
+    }
+  });
+  box.appendChild(statusLine);
+  box.appendChild(regBtn);
+  setTimeout(() => refreshTelegramStatus(form), 200);
+  return box;
+}
+
+async function refreshTelegramStatus(form) {
+  const line = form.querySelector('[data-tg-status]');
+  if (!line) return;
+  try {
+    const r = await api('/api/admin/telegram/status');
+    if (!r.configured) { line.textContent = 'Status: belum dikonfigurasi (isi token + webhook secret lalu Simpan).'; return; }
+    const wh = r.webhook || {};
+    const botName = r.bot ? '@' + r.bot.username : 'bot';
+    if (wh.url) {
+      line.innerHTML = `✅ ${botName} aktif · webhook terdaftar` +
+        (wh.lastError ? ` · <span style="color:var(--color-error)">error: ${wh.lastError}</span>` : '') +
+        (wh.pending ? ` · ${wh.pending} update tertunda` : '');
+    } else {
+      line.innerHTML = `⚠️ ${botName} terhubung, tapi webhook BELUM terdaftar. Klik tombol di bawah.`;
+    }
+  } catch (e) {
+    line.textContent = 'Status: tidak bisa diperiksa (' + e.message + ').';
+  }
 }
 
 export async function pageSettings() {
