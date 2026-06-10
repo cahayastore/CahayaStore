@@ -9,9 +9,7 @@
 .banner-dot { width: 9px; height: 9px; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--panel-line); cursor: pointer; transition: width .2s ease, background .2s ease; }
 .banner-dot.is-active { width: 26px; background: var(--primary); }
 .category-strip, .products-section, .why { margin-top: 24px; padding: 20px; }
-.section-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; }
-.section-head h2 { margin: 0; font: 700 16px/20px var(--display); }
-.section-head span { color: var(--muted); font-size: 12px; font-weight: 400; font-family: var(--font-ui); }
+.rail-status { color: var(--muted); font-size: 12px; font-weight: 400; font-family: var(--font-ui); white-space: nowrap; }
 .category-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 12px; }
 .category-card {
   position: relative;

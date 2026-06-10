@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/styles/cahaya-design-system.css?v=20260610-botnav" />
   <script src="/scripts/cds-theme.js?v=20260610-dark"></script>
   <link rel="stylesheet" href="/styles/layout.css?v=20260610-dark2" />
-  <link rel="stylesheet" href="/styles/home.css?v=20260610-dark2" />
+  <link rel="stylesheet" href="/styles/home.css?v=20260610-railsame" />
   <script type="module" src="/scripts/cds-background.js?v=20260609-1"></script>
 </head>
 <body>
@@ -75,7 +75,12 @@
     </section>
 
     <section class="category-strip panel container" id="categories">
-      <div class="section-head"><h2>Kategori Produk</h2><span data-category-status>Memuat...</span></div>
+      <div class="rail-head">
+        <div class="rail-head-left">
+          <h2 class="rail-title">Kategori Produk</h2>
+        </div>
+        <span class="rail-status" data-category-status>Memuat...</span>
+      </div>
       <div class="category-grid" data-categories></div>
     </section>
 
@@ -88,7 +93,6 @@
       <div class="product-grid" data-products></div>
       <div class="empty-state" data-empty-state hidden>
         <b>Belum ada produk aktif</b>
-        <p>Produk yang ditambahkan dari admin panel akan otomatis muncul di sini.</p>
       </div>
     </section>
 
