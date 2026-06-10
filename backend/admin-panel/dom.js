@@ -48,3 +48,28 @@ export function closeModal() {
 export function alertBox(kind, message) {
   return el('div', { class: 'alert ' + kind }, message);
 }
+
+/* Global toast notifications.
+   kind: 'ok' | 'err' | 'info' (default 'ok'). Auto-dismiss after `ms`. */
+export function toast(message, kind = 'ok', ms = 3200) {
+  let host = document.getElementById('toast-host');
+  if (!host) {
+    host = el('div', { id: 'toast-host', class: 'toast-host' });
+    document.body.appendChild(host);
+  }
+  const icon = kind === 'err' ? '✕' : kind === 'info' ? 'ℹ' : '✓';
+  const node = el('div', { class: 'toast toast--' + kind, role: 'status' },
+    el('span', { class: 'toast-icon' }, icon),
+    el('span', { class: 'toast-msg' }, message)
+  );
+  host.appendChild(node);
+  // enter animation
+  requestAnimationFrame(() => node.classList.add('toast--show'));
+  const remove = () => {
+    node.classList.remove('toast--show');
+    setTimeout(() => node.remove(), 220);
+  };
+  const timer = setTimeout(remove, ms);
+  node.addEventListener('click', () => { clearTimeout(timer); remove(); });
+  return node;
+}

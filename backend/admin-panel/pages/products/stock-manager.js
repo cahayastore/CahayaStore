@@ -3,7 +3,7 @@
    List + bulk-add + delete stok untuk satu produk.
    Reuse wizard modal styles (wz-bg, wz-modal, wz-head, ...) supaya hemat CSS.
    ════════════════════════════════════════════════════════════════════ */
-import { el, alertBox, formatDate } from '../../dom.js';
+import { el, alertBox, toast, formatDate } from '../../dom.js';
 import { api } from '../../api.js';
 import { STOCK_CONTENT_MAP, parseStockItems } from './constants.js';
 
@@ -86,7 +86,7 @@ function buildStockList(stocks, onDelete) {
   return t;
 }
 
-function buildAddForm(product, onAdded, status) {
+function buildAddForm(product, onAdded) {
   // Always allow adding stock via a content-type selector, regardless of the
   // product's configured stock_type. This decouples stock from the wizard.
   const CONTENT_OPTIONS = [
@@ -129,8 +129,7 @@ function buildAddForm(product, onAdded, status) {
   addBtn.addEventListener('click', async () => {
     const items = parseStockItems(textarea.value);
     if (!items.length) {
-      status.textContent = 'Isi minimal satu item.';
-      status.className = 'alert err'; status.style.display = '';
+      toast('Isi minimal satu item.', 'err');
       return;
     }
     addBtn.disabled = true;
@@ -142,12 +141,10 @@ function buildAddForm(product, onAdded, status) {
       });
       textarea.value = '';
       counter.textContent = '0 item';
-      status.textContent = `Berhasil menambahkan ${r.count} stok.`;
-      status.className = 'alert ok'; status.style.display = '';
+      toast(`Berhasil menambahkan ${r.count} stok.`, 'ok');
       onAdded();
     } catch (e) {
-      status.textContent = e.message || 'Gagal menambah stok.';
-      status.className = 'alert err'; status.style.display = '';
+      toast(e.message || 'Gagal menambah stok.', 'err');
     } finally {
       addBtn.disabled = false;
       addBtn.textContent = '+ Tambah ke Stok';
@@ -179,9 +176,6 @@ export function openStockManager({ product, onDone }) {
   root.appendChild(modal);
   document.body.appendChild(root);
 
-  const status = alertBox('', '');
-  status.style.display = 'none';
-
   const listHost = el('div', { id: 'stock-list-host' },
     el('p', { class: 'muted' }, 'Memuat…'));
 
@@ -202,14 +196,14 @@ export function openStockManager({ product, onDone }) {
     if (!confirm('Hapus stok ini? Hanya stok yang belum terjual yang bisa dihapus.')) return;
     try {
       await api(`/api/admin/products/${product.id}/stocks/${stockId}`, { method: 'DELETE' });
+      toast('Stok dihapus.', 'ok');
       reloadList();
     } catch (e) {
-      status.textContent = e.message || 'Gagal menghapus stok.';
-      status.className = 'alert err'; status.style.display = '';
+      toast(e.message || 'Gagal menghapus stok.', 'err');
     }
   }
 
-  const addForm = buildAddForm(product, reloadList, status);
+  const addForm = buildAddForm(product, reloadList);
 
   function render() {
     modal.innerHTML = '';
@@ -221,7 +215,6 @@ export function openStockManager({ product, onDone }) {
     const body = el('div', { class: 'wz-body' },
       el('h3', { style: 'margin:0 0 6px;font-family:var(--font-h);font-size:15px' }, 'Tambah Stok'),
       addForm,
-      status,
       el('h3', { style: 'margin:18px 0 8px;font-family:var(--font-h);font-size:15px' }, 'Stok Tersimpan'),
       listHost
     );

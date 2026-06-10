@@ -3,7 +3,7 @@
    Modal full-screen wizard (4 step) untuk create/edit produk.
    Modular: step files di folder yang sama.
    ════════════════════════════════════════════════════════════════════ */
-import { el, alertBox } from '../../dom.js';
+import { el, alertBox, toast } from '../../dom.js';
 import { api } from '../../api.js';
 import {
   STEPS,
@@ -142,6 +142,7 @@ export function openProductWizard({ product = null, categories = [], onDone }) {
       }
 
       closeWizard();
+      toast(isEdit ? 'Perubahan produk tersimpan.' : 'Produk berhasil dibuat.', 'ok');
       if (typeof onDone === 'function') onDone();
     } catch (e) {
       state.submitting = false;

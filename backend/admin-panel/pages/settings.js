@@ -1,4 +1,4 @@
-import { el, alertBox } from '../dom.js';
+import { el, alertBox, toast } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
 import { buildChangePasswordCard } from './settings/change-password.js';
@@ -67,11 +67,9 @@ function buildSection(section) {
         method: 'PUT',
         body: JSON.stringify({ value, secret: section.secret })
       });
-      status.textContent = 'Berhasil disimpan.';
-      status.className = 'alert ok'; status.style.display = '';
+      toast(`${section.title} tersimpan.`, 'ok');
     } catch (err) {
-      status.textContent = err.message;
-      status.className = 'alert err'; status.style.display = '';
+      toast(err.message, 'err');
     }
   });
 

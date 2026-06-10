@@ -1,4 +1,4 @@
-import { el, $, showModal, closeModal, alertBox } from '../dom.js';
+import { el, $, showModal, closeModal, alertBox, toast } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
 import { buildImageUpload } from '../upload-widget.js';
@@ -10,8 +10,13 @@ function rowActions(c, onReload) {
       class: 'btn danger small',
       onclick: async () => {
         if (!confirm('Hapus kategori ini?')) return;
-        await api('/api/admin/categories/' + c.id, { method: 'DELETE' });
-        onReload();
+        try {
+          await api('/api/admin/categories/' + c.id, { method: 'DELETE' });
+          toast('Kategori dihapus.', 'ok');
+          onReload();
+        } catch (e) {
+          toast('Gagal menghapus: ' + e.message, 'err');
+        }
       }
     }, 'Hapus')
   );
@@ -37,10 +42,15 @@ function openForm(c, onReload) {
   showModal(c ? 'Edit Kategori' : 'Tambah Kategori', f, async () => {
     const fd = new FormData(f);
     const body = { name: fd.get('name'), slug: fd.get('slug'), image_url: state.image_url || null, is_active: !!fd.get('is_active') };
-    if (c) await api('/api/admin/categories/' + c.id, { method: 'PUT', body: JSON.stringify(body) });
-    else await api('/api/admin/categories', { method: 'POST', body: JSON.stringify(body) });
-    closeModal();
-    onReload();
+    try {
+      if (c) await api('/api/admin/categories/' + c.id, { method: 'PUT', body: JSON.stringify(body) });
+      else await api('/api/admin/categories', { method: 'POST', body: JSON.stringify(body) });
+      closeModal();
+      toast(c ? 'Kategori diperbarui.' : 'Kategori dibuat.', 'ok');
+      onReload();
+    } catch (e) {
+      toast(e.message, 'err');
+    }
   });
 }
 

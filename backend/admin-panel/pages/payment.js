@@ -1,5 +1,5 @@
 /* Admin page: Pembayaran (MyQRIS + PayHook) */
-import { el, alertBox } from '../dom.js';
+import { el, toast } from '../dom.js';
 import { api, API_BASE, session } from '../api.js';
 import { shell } from '../shell.js';
 
@@ -15,9 +15,6 @@ function field(label, node, hint) {
 }
 
 export async function pagePayment() {
-  const status = alertBox('', '');
-  status.style.display = 'none';
-
   const merchantName = el('input', { name: 'merchant_name', placeholder: 'Cahaya Store' });
   const qrisStatic = el('textarea', { name: 'qris_static', rows: '4', placeholder: '00020101021126...QRIS string dari merchant' });
   const webhookToken = el('input', { name: 'webhook_token', type: 'text', placeholder: 'token rahasia untuk PayHook' });
@@ -78,8 +75,7 @@ export async function pagePayment() {
     qrisField,
     field('PayHook Token', webhookToken, 'Token rahasia yang dikirim aplikasi PayHook saat verifikasi pembayaran.'),
     field('Maks Nominal Unik (Rp)', uniqueMax, 'Selisih rupiah unik untuk membedakan order bersamaan (default 50).'),
-    el('button', { class: 'btn primary', type: 'submit' }, 'Simpan Konfigurasi'),
-    status
+    el('button', { class: 'btn primary', type: 'submit' }, 'Simpan Konfigurasi')
   );
 
   form.addEventListener('submit', async (e) => {
@@ -91,8 +87,7 @@ export async function pagePayment() {
       unique_max: Math.max(1, Math.min(200, Number(uniqueMax.value) || 50)),
     };
     if (!value.qris_static) {
-      status.textContent = 'QRIS statis wajib diisi.';
-      status.className = 'alert err'; status.style.display = '';
+      toast('QRIS statis wajib diisi.', 'err');
       return;
     }
     try {
@@ -100,11 +95,9 @@ export async function pagePayment() {
         method: 'PUT',
         body: JSON.stringify({ value, secret: true }),
       });
-      status.textContent = 'Konfigurasi pembayaran tersimpan.';
-      status.className = 'alert ok'; status.style.display = '';
+      toast('Konfigurasi pembayaran tersimpan.', 'ok');
     } catch (err) {
-      status.textContent = err.message;
-      status.className = 'alert err'; status.style.display = '';
+      toast(err.message, 'err');
     }
   });
 

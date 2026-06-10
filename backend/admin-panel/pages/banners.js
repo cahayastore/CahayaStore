@@ -1,5 +1,5 @@
 /* Admin page: Banner manager — stored in settings key store.banners */
-import { el, alertBox } from '../dom.js';
+import { el, toast } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
 import { buildImageUpload } from '../upload-widget.js';
@@ -65,8 +65,6 @@ export async function pageBanners() {
     items = normalizeItems(r.value);
   } catch { items = []; }
 
-  const status = alertBox('', '');
-  status.style.display = 'none';
   const list = el('div', { class: 'banner-list' });
 
   function reorder() {
@@ -116,11 +114,9 @@ export async function pageBanners() {
         method: 'PUT',
         body: JSON.stringify({ value, secret: false })
       });
-      status.textContent = 'Banner berhasil disimpan.';
-      status.className = 'alert ok'; status.style.display = '';
+      toast('Banner berhasil disimpan.', 'ok');
     } catch (err) {
-      status.textContent = err.message;
-      status.className = 'alert err'; status.style.display = '';
+      toast(err.message, 'err');
     }
   }
 
@@ -139,7 +135,7 @@ export async function pageBanners() {
         el('button', { class: 'btn primary', type: 'button', onclick: save }, 'Simpan')
       )
     ),
-    el('div', { class: 'card' }, status, list)
+    el('div', { class: 'card' }, list)
   );
 
   return shell(wrap);

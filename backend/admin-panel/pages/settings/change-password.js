@@ -2,7 +2,7 @@
    Change-password card (admin settings page)
    POST /api/auth/change-password { current_password, new_password }
    ════════════════════════════════════════════════════════════════════ */
-import { el, alertBox } from '../../dom.js';
+import { el, toast } from '../../dom.js';
 import { api, session } from '../../api.js';
 
 function pwField(name, label, placeholder = '') {
@@ -36,9 +36,6 @@ function scorePassword(pw) {
 }
 
 export function buildChangePasswordCard() {
-  const status = alertBox('', '');
-  status.style.display = 'none';
-
   const meter = el('div', {
     style: 'height:6px;border-radius:999px;background:var(--color-border);overflow:hidden;margin-top:6px',
   }, el('div', {
@@ -68,32 +65,27 @@ export function buildChangePasswordCard() {
   form.appendChild(meter);
   form.appendChild(meterLabel);
   form.appendChild(fConfirm);
-  form.appendChild(status);
 
   const submitBtn = el('button', { class: 'btn primary', type: 'submit' }, 'Ubah Password');
   form.appendChild(submitBtn);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    status.style.display = 'none';
     const fd = new FormData(form);
     const current_password = String(fd.get('current_password') || '');
     const new_password = String(fd.get('new_password') || '');
     const confirm_password = String(fd.get('confirm_password') || '');
 
     if (new_password.length < 10) {
-      status.textContent = 'Password baru minimal 10 karakter.';
-      status.className = 'alert err'; status.style.display = '';
+      toast('Password baru minimal 10 karakter.', 'err');
       return;
     }
     if (new_password !== confirm_password) {
-      status.textContent = 'Konfirmasi password tidak cocok.';
-      status.className = 'alert err'; status.style.display = '';
+      toast('Konfirmasi password tidak cocok.', 'err');
       return;
     }
     if (new_password === current_password) {
-      status.textContent = 'Password baru harus berbeda dari password lama.';
-      status.className = 'alert err'; status.style.display = '';
+      toast('Password baru harus berbeda dari password lama.', 'err');
       return;
     }
 
@@ -104,8 +96,7 @@ export function buildChangePasswordCard() {
         method: 'POST',
         body: JSON.stringify({ current_password, new_password }),
       });
-      status.textContent = 'Password berhasil diubah. Silakan login ulang.';
-      status.className = 'alert ok'; status.style.display = '';
+      toast('Password berhasil diubah. Silakan login ulang.', 'ok');
       form.reset();
       const bar = meter.firstChild;
       bar.style.width = '0';
@@ -115,8 +106,7 @@ export function buildChangePasswordCard() {
         location.hash = '#/login';
       }, 1500);
     } catch (err) {
-      status.textContent = err.message || 'Gagal mengubah password.';
-      status.className = 'alert err'; status.style.display = '';
+      toast(err.message || 'Gagal mengubah password.', 'err');
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Ubah Password';

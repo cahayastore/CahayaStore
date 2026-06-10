@@ -3,7 +3,7 @@
    Tampilan tabel mirip dashboard.marketku.id, dengan toolbar pencarian
    dan tombol "+ Tambah Produk" yang membuka wizard.
    ════════════════════════════════════════════════════════════════════ */
-import { el, formatIDR, alertBox } from '../../dom.js';
+import { el, formatIDR, alertBox, toast } from '../../dom.js';
 import { api } from '../../api.js';
 import { shell } from '../../shell.js';
 import { PRODUCT_TYPES } from './constants.js';
@@ -34,9 +34,10 @@ function rowActions(p, ctx) {
         if (!confirm(`Hapus produk "${p.name}"?`)) return;
         try {
           await api('/api/admin/products/' + p.id, { method: 'DELETE' });
+          toast('Produk dihapus.', 'ok');
           ctx.reload();
         } catch (e) {
-          alert('Gagal menghapus: ' + e.message);
+          toast('Gagal menghapus: ' + e.message, 'err');
         }
       }
     }, 'Hapus')
