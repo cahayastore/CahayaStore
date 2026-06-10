@@ -1,6 +1,7 @@
 const API = 'https://api.cahayastore.me/api';
 const POLL_MS = 4500;
 const PAID = ['paid', 'completed', 'success', 'settlement', 'capture'];
+const EXPIRED = ['expired', 'cancelled', 'canceled', 'failed'];
 
 const rupiah = (v) => {
   const n = Number(v || 0);
@@ -12,6 +13,18 @@ function esc(v) {
     .replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
 const root = () => document.querySelector('[data-pay]');
+
+/* Format remaining time until an ISO deadline as "mm:ss" (or "00:00" if past). */
+function countdownText(expiresAt) {
+  if (!expiresAt) return null;
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (!Number.isFinite(ms)) return null;
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = String(Math.floor(total / 60)).padStart(2, '0');
+  const s = String(total % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+const isExpiredStatus = (s) => EXPIRED.includes(String(s || '').toLowerCase());
 
 /* ── Customer session (persists across browsers via login) ──────────── */
 const SESSION_KEY = 'cs_session';
@@ -112,11 +125,26 @@ async function createOrder(productId, qty) {
 async function renderPayment(orderNo, token) {
   let status = 'pending';
   let order = null;
+  let expiresAt = null;
 
   async function load() {
     const r = await api(`/payment-gateways/status/${encodeURIComponent(orderNo)}`);
     status = String(r.data.status || 'pending').toLowerCase();
+    expiresAt = r.data.expiresAt || expiresAt;
     return r.data;
+  }
+
+  function paintExpired() {
+    root().innerHTML = `<div class="pay-card pay-center">
+      <div class="pay-badge expired">⌛ Pembayaran kedaluwarsa</div>
+      <h2>Pembayaran QRIS</h2>
+      <p class="muted">Order ${esc(orderNo)}</p>
+      <div class="pay-notice pay-notice--warn">
+        Waktu pembayaran sudah habis dan order ini dibatalkan otomatis. Stok produk sudah dilepas kembali.
+      </div>
+      <a class="btn btn-primary pay-open" href="/">Belanja lagi →</a>
+      <p class="pay-hint">Silakan buat pesanan baru jika masih ingin membeli produk ini.</p>
+    </div>`;
   }
 
   function paint() {
@@ -126,17 +154,22 @@ async function renderPayment(orderNo, token) {
       <h2>Pembayaran QRIS</h2>
       <p class="muted">Order ${esc(orderNo)}</p>
       ${paid ? '' : `<div class="pay-qris" data-qris>Memuat QRIS…</div>`}
+      ${paid ? '' : `<div class="pay-timer" data-timer hidden>Bayar dalam <b data-countdown>--:--</b></div>`}
       <p class="pay-hint">${paid ? 'Mengarahkan ke produk kamu…' : 'Scan QRIS di atas dengan aplikasi e-wallet / m-banking. Status diperbarui otomatis.'}</p>
     </div>`;
   }
 
   try { order = await load(); } catch (e) { root().innerHTML = errCard(e.message); return; }
-  paint();
+
+  if (isExpiredStatus(status)) { paintExpired(); return; }
 
   if (PAID.includes(status)) {
+    paint();
     location.replace(`/order/${encodeURIComponent(orderNo)}?t=${encodeURIComponent(token || '')}`);
     return;
   }
+
+  paint();
 
   // QRIS data lives on the create response; for reloads we show a generic notice.
   const qris = root().querySelector('[data-qris]');
@@ -149,12 +182,37 @@ async function renderPayment(orderNo, token) {
     }
   }
 
-  const timer = setInterval(async () => {
+  let statusTimer = null;
+  let tick = null;
+  const stop = () => { if (statusTimer) clearInterval(statusTimer); if (tick) clearInterval(tick); };
+
+  // Live countdown to the expiry deadline.
+  function refreshCountdown() {
+    const box = root().querySelector('[data-timer]');
+    const out = root().querySelector('[data-countdown]');
+    if (!box || !out) return;
+    const cd = countdownText(expiresAt);
+    if (!cd) { box.hidden = true; return; }
+    box.hidden = false;
+    out.textContent = cd;
+    if (cd === '00:00') {
+      // Deadline reached locally — confirm with the server, then show expired.
+      stop();
+      load().then(() => { paintExpired(); }).catch(() => paintExpired());
+    }
+  }
+  refreshCountdown();
+  tick = setInterval(refreshCountdown, 1000);
+
+  statusTimer = setInterval(async () => {
     try {
       await load();
       if (PAID.includes(status)) {
-        clearInterval(timer);
+        stop();
         location.replace(`/order/${encodeURIComponent(orderNo)}?t=${encodeURIComponent(token || '')}`);
+      } else if (isExpiredStatus(status)) {
+        stop();
+        paintExpired();
       }
     } catch { /* keep polling */ }
   }, POLL_MS);
@@ -170,6 +228,20 @@ async function renderOrder(orderNo, token) {
   }
   let data;
   try { data = (await load()).data; } catch (e) { root().innerHTML = errCard(e.message); return; }
+
+  if (isExpiredStatus(data.status)) {
+    root().innerHTML = `<div class="pay-card pay-center">
+      <div class="pay-badge expired">⌛ Pembayaran kedaluwarsa</div>
+      <h2>${esc(data.productName || 'Pesanan')}</h2>
+      <p class="muted">Order ${esc(orderNo)}</p>
+      <div class="pay-notice pay-notice--warn">
+        Order ini sudah kedaluwarsa karena tidak dibayar tepat waktu. Stok sudah dilepas kembali.
+      </div>
+      <a class="btn btn-primary pay-open" href="/">Belanja lagi →</a>
+      <div class="pay-account-links"><a href="/riwayat">Riwayat belanja saya →</a></div>
+    </div>`;
+    return;
+  }
 
   if (data.status !== 'paid') {
     root().innerHTML = `<div class="pay-card pay-center">
@@ -302,14 +374,22 @@ async function renderHistory() {
       bindLogout();
       return;
     }
-    host.innerHTML = head + orders.map((o) => `
+    host.innerHTML = head + orders.map((o) => {
+      const st = String(o.paymentStatus || '').toLowerCase();
+      const badge = PAID.includes(st)
+        ? { cls: 'ok', label: 'Lunas' }
+        : isExpiredStatus(st)
+          ? { cls: 'expired', label: 'Kedaluwarsa' }
+          : { cls: 'wait', label: 'Menunggu' };
+      return `
       <a class="pay-hist-row" href="/order/${encodeURIComponent(o.orderId)}?t=${encodeURIComponent(o.token || '')}">
         <div class="pay-hist-main">
           <span class="pay-hist-name">${esc((o.products || []).join(', ') || o.orderId)}</span>
           <span class="pay-hist-meta">${esc(o.orderId)} · ${rupiah(o.amount)}</span>
         </div>
-        <span class="pay-badge ${PAID.includes(o.paymentStatus) ? 'ok' : 'wait'}">${PAID.includes(o.paymentStatus) ? 'Lunas' : 'Menunggu'}</span>
-      </a>`).join('') + logoutLink();
+        <span class="pay-badge ${badge.cls}">${badge.label}</span>
+      </a>`;
+    }).join('') + logoutLink();
     bindLogout();
   } catch (e) {
     root().querySelector('[data-h]').textContent = e.message;

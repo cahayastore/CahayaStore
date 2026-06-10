@@ -12,10 +12,27 @@ const { query, tx } = require('../db');
 const { createInvoice, getUniqueMax, verifyPayhookToken } = require('../payment/myqris.service');
 const { decryptString } = require('../crypto');
 const { issueGatewaySession, issueWebSession, resolveCustomer } = require('../customer-auth');
+const { getSetting, KEYS } = require('../settings.service');
 
 const router = express.Router();
 
-const ORDER_EXPIRE_MINUTES = Number(process.env.ORDER_EXPIRE_MINUTES) || 30;
+const DEFAULT_EXPIRE_MINUTES = Number(process.env.ORDER_EXPIRE_MINUTES) || 30;
+
+// Resolve the configurable order-expiry window (minutes). Cached briefly to
+// avoid hitting the DB on every checkout/poll. Admin can change it in Pengaturan.
+let _expiryCache = { value: DEFAULT_EXPIRE_MINUTES, at: 0 };
+async function getExpireMinutes() {
+  const now = Date.now();
+  if (now - _expiryCache.at < 30000) return _expiryCache.value;
+  let minutes = DEFAULT_EXPIRE_MINUTES;
+  try {
+    const cfg = await getSetting(KEYS.ORDER_POLICY);
+    const m = Number(cfg && cfg.expiry_minutes);
+    if (Number.isFinite(m) && m >= 1 && m <= 1440) minutes = Math.round(m);
+  } catch { /* fall back to default */ }
+  _expiryCache = { value: minutes, at: now };
+  return minutes;
+}
 
 function genOrderNo() {
   return `CS-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -198,12 +215,14 @@ router.post('/public/web-checkout', async (req, res) => {
   const gatewaySession = userHasPassword ? null : issueGatewaySession(customer);
   const webSessionToken = issueWebSession(customer);
 
+  const expireMinutes = await getExpireMinutes();
+
   try {
     const result = await tx(async (client) => {
       const o = await client.query(
         `INSERT INTO orders (order_no, user_id, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token, expires_at)
          VALUES ($1,$2,$3,$4,$5,'pending_payment','pending',$6, now() + ($7 || ' minutes')::interval) RETURNING *`,
-        [orderNo, customer.id, normEmail, customerWhatsapp || null, uniqueAmount, accessToken, String(ORDER_EXPIRE_MINUTES)]
+        [orderNo, customer.id, normEmail, customerWhatsapp || null, uniqueAmount, accessToken, String(expireMinutes)]
       );
       const order = o.rows[0];
       for (const ln of lines) {
@@ -222,7 +241,7 @@ router.post('/public/web-checkout', async (req, res) => {
                 ORDER BY created_at ASC
                 LIMIT $2 FOR UPDATE SKIP LOCKED
              )`,
-          [ln.product_id, ln.quantity, String(ORDER_EXPIRE_MINUTES), order.id]
+          [ln.product_id, ln.quantity, String(expireMinutes), order.id]
         );
       }
       let invoice;

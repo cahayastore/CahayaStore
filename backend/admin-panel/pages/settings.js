@@ -21,6 +21,14 @@ const SECTIONS = [
       { name: 'telegram_link', label: 'Link Telegram' },
       { name: 'support_email', label: 'Email Support' }
     ]
+  },
+  {
+    key: 'order.policy', secret: false, title: 'Kebijakan Order',
+    note: 'Batas waktu pembayaran. Order yang belum dibayar melewati batas ini otomatis kedaluwarsa dan stok dilepas kembali.',
+    fields: [
+      { name: 'expiry_minutes', label: 'Batas Waktu Pembayaran (menit)', type: 'number', min: 1, max: 1440, default: 30,
+        hint: 'Antara 1–1440 menit (maks 24 jam). Default 30 menit.' }
+    ]
   }
 ];
 
@@ -30,8 +38,16 @@ function inputField(field, value) {
     return el('div', { class: 'field' }, el('label', {}, field.label),
       el('textarea', { ...attrs, rows: '2' }, value || ''));
   }
-  return el('div', { class: 'field' }, el('label', {}, field.label),
-    el('input', { ...attrs, type: field.type || 'text', value: value || '' }));
+  if (field.type === 'number') {
+    if (field.min != null) attrs.min = String(field.min);
+    if (field.max != null) attrs.max = String(field.max);
+    attrs.step = '1';
+  }
+  const shown = value != null && value !== '' ? value : (field.default != null ? field.default : '');
+  const node = el('div', { class: 'field' }, el('label', {}, field.label),
+    el('input', { ...attrs, type: field.type || 'text', value: shown }));
+  if (field.hint) node.appendChild(el('small', { class: 'field-hint' }, field.hint));
+  return node;
 }
 
 function buildSection(section) {
@@ -61,7 +77,21 @@ function buildSection(section) {
     e.preventDefault();
     const fd = new FormData(form);
     const value = {};
-    for (const f of section.fields) value[f.name] = fd.get(f.name) || null;
+    for (const f of section.fields) {
+      const raw = fd.get(f.name);
+      if (f.type === 'number') {
+        let n = Number(raw);
+        if (!Number.isFinite(n)) n = f.default != null ? Number(f.default) : null;
+        if (n != null) {
+          if (f.min != null) n = Math.max(f.min, n);
+          if (f.max != null) n = Math.min(f.max, n);
+          n = Math.round(n);
+        }
+        value[f.name] = n;
+      } else {
+        value[f.name] = raw || null;
+      }
+    }
     try {
       await api('/api/admin/settings/' + section.key, {
         method: 'PUT',

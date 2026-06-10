@@ -18,6 +18,12 @@
 .pay-badge.ok { background: color-mix(in srgb, var(--green) 14%, #fff); color: var(--green); }
 .pay-badge.wait { background: var(--primary-soft); color: var(--primary); }
 .pay-badge.err { background: color-mix(in srgb, var(--danger) 12%, #fff); color: var(--danger); }
+.pay-badge.expired { background: color-mix(in srgb, var(--danger) 12%, #fff); color: var(--danger); }
+
+.pay-timer { margin: 10px auto 0; font-size: 14px; color: var(--muted); }
+.pay-timer b { font-variant-numeric: tabular-nums; color: var(--text); font-size: 16px; }
+.pay-notice { margin: 16px auto; max-width: 420px; padding: 12px 16px; border-radius: var(--radius-md); font-size: 13.5px; line-height: 1.6; }
+.pay-notice--warn { background: color-mix(in srgb, var(--danger) 8%, #fff); border: 1px solid color-mix(in srgb, var(--danger) 22%, #fff); color: var(--danger); }
 
 .pay-qris { margin: 18px auto; display: grid; place-items: center; min-height: 240px; }
 .pay-qris img { border-radius: var(--radius-md); border: 1px solid var(--panel-line); background: #fff; }
