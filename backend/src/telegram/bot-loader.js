@@ -1,6 +1,7 @@
 'use strict';
+const crypto = require('crypto');
 const { Bot } = require('grammy');
-const { getSetting, KEYS } = require('../settings.service');
+const { getSetting, setSetting, KEYS } = require('../settings.service');
 const { query } = require('../db');
 
 const bots = new Map(); // botId -> Bot instance
@@ -8,6 +9,9 @@ const bots = new Map(); // botId -> Bot instance
 // Public base URL of the API (where Telegram should POST updates).
 const PUBLIC_API_URL = (process.env.PUBLIC_API_URL || 'https://api.cahayastore.me').replace(/\/+$/, '');
 const DEFAULT_BOT_ID = process.env.TELEGRAM_BOT_ID || 'main';
+
+// Telegram only allows A-Z, a-z, 0-9, _ and - (1-256 chars) for secret_token.
+const SECRET_RE = /^[A-Za-z0-9_-]{1,256}$/;
 
 function buildBot(token) {
   const bot = new Bot(token);
@@ -54,13 +58,22 @@ async function handleUpdate(botId, update) {
 async function registerWebhook(botId = DEFAULT_BOT_ID) {
   const cfg = await getSetting(KEYS.TELEGRAM_BOT);
   if (!cfg || !cfg.token) throw new Error('Telegram bot token not configured');
-  if (!cfg.webhook_secret) throw new Error('Telegram webhook_secret not configured');
+
+  // Telegram restricts the secret_token charset. If the stored secret is empty
+  // or contains unallowed characters, generate a compatible one and persist it
+  // (so the inbound x-telegram-bot-api-secret-token check keeps matching).
+  let secret = cfg.webhook_secret;
+  if (!secret || !SECRET_RE.test(secret)) {
+    secret = crypto.randomBytes(24).toString('base64url'); // url-safe: A-Za-z0-9_-
+    await setSetting(KEYS.TELEGRAM_BOT, { ...cfg, webhook_secret: secret }, { secret: true });
+    clearCache();
+  }
 
   const url = `${PUBLIC_API_URL}/api/webhooks/telegram/${botId}`;
   const bot = await getOrLoadBot(botId);
 
   await bot.api.setWebhook(url, {
-    secret_token: cfg.webhook_secret,
+    secret_token: secret,
     allowed_updates: ['message', 'callback_query'],
     drop_pending_updates: false,
   });
@@ -73,7 +86,7 @@ async function registerWebhook(botId = DEFAULT_BOT_ID) {
     ]);
   } catch (e) { console.warn('[tg setMyCommands]', e.message); }
 
-  return { ok: true, url };
+  return { ok: true, url, secretRegenerated: secret !== cfg.webhook_secret };
 }
 
 /* Remove the webhook (e.g. when disabling the bot). */
