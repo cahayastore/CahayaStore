@@ -122,7 +122,7 @@
 }
 
 /* ─ Dark theme: override base --color-* only; mkd-*/ds-* derive from them ─ */
-[data-theme="dark"] {
+:root[data-theme="dark"] {
   color-scheme: dark;
 
   --color-bg: #0D1320;
