@@ -37,6 +37,13 @@ function registerStartHandlers(bot, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
       .text('🎁 Referral', 'menu:referral').text('❓ Bantuan', 'menu:help');
 
     await ctx.reply(welcome, { parse_mode: 'HTML', reply_markup: kb });
+
+    // Show the v3 product list + persistent "Menu" reply keyboard.
+    try {
+      const { showProductList, menuReplyKeyboard } = require('./v3-menu');
+      await ctx.reply('Pilih produk:', { reply_markup: menuReplyKeyboard() });
+      await showProductList(ctx, 0);
+    } catch (e) { console.error('[tg start v3]', e.message); }
   });
 
   // Admin helper to discover chat id.

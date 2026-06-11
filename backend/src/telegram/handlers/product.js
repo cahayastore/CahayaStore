@@ -2,48 +2,66 @@
 const { InlineKeyboard } = require('grammy');
 const { query } = require('../../db');
 const { escapeHtml, rupiah } = require('./_shared');
+const { showProductList } = require('./v3-menu');
 
-async function listProducts(ctx) {
+async function showProductDetail(ctx, productId, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
   const r = await query(
-    `SELECT name, slug, price, product_type FROM products
-      WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 12`
+    `SELECT p.name, p.slug, p.description, p.price,
+            count(s.id) FILTER (WHERE s.status='available') AS stock
+       FROM products p
+       LEFT JOIN product_stocks s ON s.product_id = p.id
+      WHERE p.id = $1 AND p.is_active = TRUE
+      GROUP BY p.id`,
+    [productId]
   );
-  if (!r.rows.length) return ctx.reply('Belum ada produk.');
-  const kb = new InlineKeyboard();
-  r.rows.forEach((p) => {
-    kb.text(`${p.name} — ${rupiah(p.price)}`, `prod:${p.slug}`).row();
-  });
-  await ctx.reply('📦 <b>Produk Terbaru</b>', { parse_mode: 'HTML', reply_markup: kb });
+  if (!r.rows.length) return ctx.reply('Produk tidak ditemukan.');
+  const p = r.rows[0];
+  const inStock = Number(p.stock) > 0;
+  const text =
+    `🛍️ <b>${escapeHtml(p.name)}</b>\n` +
+    `Harga: <b>${rupiah(p.price)}</b>\n` +
+    `Stok: ${inStock ? '✅ tersedia' : '❌ habis'}\n\n` +
+    `${escapeHtml(p.description || '').slice(0, 600)}`;
+  const kb = new InlineKeyboard()
+    .webApp('🛒 Beli Sekarang', `${PRODUCT_DOMAIN}/produk/${encodeURIComponent(p.slug)}?miniapp=1&v=${MINIAPP_VERSION || '1'}`).row()
+    .text('← Kembali', 'v3:tolist');
+  await ctx.reply(text, { parse_mode: 'HTML', reply_markup: kb });
 }
 
-function registerProductHandlers(bot, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
-  bot.command('products', (ctx) => listProducts(ctx));
-  bot.callbackQuery('menu:products', async (ctx) => { await ctx.answerCallbackQuery(); return listProducts(ctx); });
+function registerProductHandlers(bot, opts = {}) {
+  // /products and the persistent "Menu" button → v3 numbered product list.
+  bot.command('products', (ctx) => showProductList(ctx, 0));
+  bot.hears('Menu', (ctx) => showProductList(ctx, 0));
+  bot.callbackQuery('menu:products', async (ctx) => { await ctx.answerCallbackQuery(); return showProductList(ctx, 0); });
 
+  // Pagination + back-to-list.
+  bot.callbackQuery(/^v3:page:(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return showProductList(ctx, Number(ctx.match[1]), true);
+  });
+  bot.callbackQuery('v3:tolist', async (ctx) => { await ctx.answerCallbackQuery(); return showProductList(ctx, 0); });
+
+  // Product detail by id.
+  bot.callbackQuery(/^v3:p:(.+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return showProductDetail(ctx, ctx.match[1], opts);
+  });
+  // Legacy slug-based detail (from category lists).
   bot.callbackQuery(/^prod:(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
-    const slug = ctx.match[1];
-    const r = await query(
-      `SELECT p.name, p.slug, p.description, p.price, p.product_type,
-              count(s.id) FILTER (WHERE s.status='available') AS stock
-         FROM products p
-         LEFT JOIN product_stocks s ON s.product_id = p.id
-        WHERE p.slug = $1 AND p.is_active = TRUE
-        GROUP BY p.id`,
-      [slug]
-    );
+    const r = await query('SELECT id FROM products WHERE slug = $1 AND is_active = TRUE', [ctx.match[1]]);
     if (!r.rows.length) return ctx.reply('Produk tidak ditemukan.');
-    const p = r.rows[0];
-    const inStock = Number(p.stock) > 0;
-    const text =
-      `🛍️ <b>${escapeHtml(p.name)}</b>\n` +
-      `Harga: <b>${rupiah(p.price)}</b>\n` +
-      `Stok: ${inStock ? '✅ tersedia' : '❌ habis'}\n\n` +
-      `${escapeHtml(p.description || '').slice(0, 600)}`;
-    const kb = new InlineKeyboard()
-      .webApp('🛒 Beli Sekarang', `${PRODUCT_DOMAIN}/produk/${encodeURIComponent(slug)}?miniapp=1&v=${MINIAPP_VERSION || '1'}`);
-    await ctx.reply(text, { parse_mode: 'HTML', reply_markup: kb });
+    return showProductDetail(ctx, r.rows[0].id, opts);
+  });
+
+  bot.callbackQuery('v3:info', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.reply(
+      'ℹ️ <b>Cahaya Store</b>\nPembayaran QRIS, produk dikirim instan setelah lunas.\n' +
+      'Tekan tombol angka untuk lihat produk, lalu "Beli Sekarang".',
+      { parse_mode: 'HTML' }
+    );
   });
 }
 
-module.exports = { registerProductHandlers, listProducts };
+module.exports = { registerProductHandlers, showProductDetail };

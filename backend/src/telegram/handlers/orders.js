@@ -32,6 +32,7 @@ async function renderOrders(ctx) {
 function registerOrdersHandlers(bot) {
   bot.command('orders', (ctx) => renderOrders(ctx));
   bot.callbackQuery('menu:orders', async (ctx) => { await ctx.answerCallbackQuery(); return renderOrders(ctx); });
+  bot.callbackQuery('v3:orders', async (ctx) => { await ctx.answerCallbackQuery(); return renderOrders(ctx); });
 }
 
 module.exports = { registerOrdersHandlers, renderOrders };

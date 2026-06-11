@@ -1,0 +1,48 @@
+/* ============================================================
+   CDS — Telegram Mini App layout overrides.
+   Active only when <html class="is-miniapp"> (set by mini-app.js).
+   Goal: show ONLY the product catalog — like Marketku's mini app.
+   Hides banner, categories, "cara order", footer, bottom-nav, and
+   trims the navbar to logo + search.
+   ============================================================ */
+
+html.is-miniapp .cds-nav { position: static; top: 0; }
+html.is-miniapp .cds-nav__inner {
+  margin-top: 8px;
+  border-radius: 16px;
+  grid-template-columns: 1fr auto;
+}
+/* Keep search + logo; drop the icon row + auth on mini app (Telegram chrome covers it). */
+html.is-miniapp .cds-nav__actions { display: none; }
+html.is-miniapp .cds-nav__inner > .cds-nav__search-wrap { display: block; }
+
+/* Hide non-product sections. */
+html.is-miniapp .banner-section,
+html.is-miniapp .category-strip,
+html.is-miniapp .why,
+html.is-miniapp .footer,
+html.is-miniapp .mk-bottom-nav,
+html.is-miniapp .nav-mobile-search { display: none !important; }
+
+/* Remove the bottom padding reserved for the (now hidden) bottom nav. */
+html.is-miniapp body { padding-bottom: 16px; }
+
+/* Make the product section the hero: full-width grid, no horizontal rail. */
+html.is-miniapp .products-section {
+  margin-top: 12px;
+}
+html.is-miniapp .products-section .rail-head { margin-bottom: 14px; }
+html.is-miniapp .product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  overflow: visible;
+}
+html.is-miniapp .product-card {
+  flex: initial;
+  width: auto;
+}
+
+@media (max-width: 520px) {
+  html.is-miniapp .product-grid { grid-template-columns: repeat(2, 1fr); }
+}
