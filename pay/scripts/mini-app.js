@@ -80,6 +80,9 @@
 
   async function prepareMiniAppRuntime() {
     if (!isMiniAppRuntime()) return { miniApp: false };
+    // Mark the document immediately so CSS can switch to the products-only layout
+    // even before (or without) the Telegram WebApp object being available.
+    document.documentElement.classList.add('is-miniapp');
     await ensureTelegramWebAppScript();
     const wa = getTelegramWebApp();
     if (wa) {
@@ -87,7 +90,6 @@
       try { wa.expand(); } catch (e) {}
       applyTheme(wa);
       try { wa.onEvent && wa.onEvent('themeChanged', () => applyTheme(wa)); } catch (e) {}
-      document.documentElement.classList.add('is-miniapp');
     }
     return { miniApp: true, webApp: wa };
   }
@@ -133,8 +135,11 @@
   // Auto-prepare + auto-login as early as possible in Telegram.
   function boot() {
     if (!isMiniAppRuntime()) return;
+    document.documentElement.classList.add('is-miniapp');
     prepareMiniAppRuntime().then(() => { miniAppLogin().catch(() => {}); });
   }
+  // Add the class synchronously too (before DOMContentLoaded) to avoid a flash.
+  if (isMiniAppRuntime()) document.documentElement.classList.add('is-miniapp');
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {
