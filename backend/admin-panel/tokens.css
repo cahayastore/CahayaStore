@@ -121,7 +121,7 @@
   --mkd-bg-animated: var(--mkd-bg-animated-spot-a), var(--mkd-bg-animated-spot-b), var(--mkd-bg-animated-base);
 }
 
-/* ─ Dark theme: override base --color-* only; mkd-*/ds-* derive from them ─ */
+/* Dark theme: override base color tokens only; mkd and ds tokens derive from them */
 :root[data-theme="dark"] {
   color-scheme: dark;
 
