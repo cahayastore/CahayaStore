@@ -1,5 +1,5 @@
-/* Cahaya Store Admin — Light theme, MKD tokens, Marketku-flavored */
-@import url('/admin/tokens.css');
+/* Cahaya Store Admin — MKD tokens, Marketku-flavored, light + dark */
+@import url('/admin/tokens.css?v=20260611-dark');
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; min-height: 100vh; }
