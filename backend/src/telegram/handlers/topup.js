@@ -1,6 +1,7 @@
 'use strict';
 const { InlineKeyboard } = require('grammy');
 const { ensureTelegramUser, rupiah } = require('./_shared');
+const { replyClean } = require('./_reply');
 const wallet = require('../../wallet.service');
 
 async function renderSaldo(ctx, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
@@ -19,9 +20,9 @@ async function renderSaldo(ctx, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
 
   const kb = new InlineKeyboard()
     .webApp('➕ Top Up Saldo', `${PRODUCT_DOMAIN}/?miniapp=1&topup=1&v=${MINIAPP_VERSION || '1'}`);
-  await ctx.reply(
+  await replyClean(ctx,
     `💰 <b>Saldo kamu: ${rupiah(balance)}</b>\n\n<b>Transaksi terakhir</b>\n${lines}`,
-    { parse_mode: 'HTML', reply_markup: kb }
+    { reply_markup: kb }
   );
 }
 

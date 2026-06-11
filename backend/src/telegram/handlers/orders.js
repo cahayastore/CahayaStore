@@ -1,6 +1,7 @@
 'use strict';
 const { query } = require('../../db');
 const { ensureTelegramUser, escapeHtml, rupiah } = require('./_shared');
+const { replyClean } = require('./_reply');
 
 async function renderOrders(ctx) {
   let user = null;
@@ -26,7 +27,7 @@ async function renderOrders(ctx) {
       : (o.status === 'expired' ? '⌛ Kedaluwarsa' : '⏳ Menunggu');
     return `• <code>${escapeHtml(o.order_no)}</code> — ${rupiah(o.total_amount)} ${st}\n  ${escapeHtml(o.products || '-')}`;
   });
-  await ctx.reply('🧾 <b>Riwayat Pesanan</b>\n\n' + lines.join('\n'), { parse_mode: 'HTML' });
+  await replyClean(ctx, '🧾 <b>Riwayat Pesanan</b>\n\n' + lines.join('\n'));
 }
 
 function registerOrdersHandlers(bot) {

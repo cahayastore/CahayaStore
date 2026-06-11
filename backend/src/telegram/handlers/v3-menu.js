@@ -6,6 +6,7 @@
 const { InlineKeyboard, Keyboard } = require('grammy');
 const { query } = require('../../db');
 const { escapeHtml, rupiah } = require('./_shared');
+const { replyClean, editOrReply } = require('./_reply');
 
 const PAGE_SIZE = 15;
 const COLUMNS = 5;
@@ -74,10 +75,9 @@ async function showProductList(ctx, page = 0, edit = false) {
   const text = buildListText({ userName: ctx.from?.first_name, products, page, totalPages });
   const reply_markup = buildListKeyboard({ products, page, totalPages });
   if (edit && ctx.callbackQuery) {
-    try { await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup }); return; }
-    catch { /* fall through to send */ }
+    return editOrReply(ctx, text, { reply_markup });
   }
-  await ctx.reply(text, { parse_mode: 'HTML', reply_markup });
+  return replyClean(ctx, text, { reply_markup });
 }
 
 module.exports = {

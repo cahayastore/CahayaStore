@@ -3,6 +3,7 @@ const { InlineKeyboard } = require('grammy');
 const { query } = require('../../db');
 const { escapeHtml, rupiah } = require('./_shared');
 const { showProductList } = require('./v3-menu');
+const { editOrReply, replyClean } = require('./_reply');
 
 async function showProductDetail(ctx, productId, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
   const r = await query(
@@ -25,7 +26,7 @@ async function showProductDetail(ctx, productId, { PRODUCT_DOMAIN, MINIAPP_VERSI
   const kb = new InlineKeyboard()
     .webApp('🛒 Beli Sekarang', `${PRODUCT_DOMAIN}/produk/${encodeURIComponent(p.slug)}?miniapp=1&v=${MINIAPP_VERSION || '1'}`).row()
     .text('← Kembali', 'v3:tolist');
-  await ctx.reply(text, { parse_mode: 'HTML', reply_markup: kb });
+  await editOrReply(ctx, text, { reply_markup: kb });
 }
 
 function registerProductHandlers(bot, opts = {}) {

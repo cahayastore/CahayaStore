@@ -1,6 +1,7 @@
 'use strict';
 const { query } = require('../../db');
 const { ensureTelegramUser, escapeHtml, rupiah } = require('./_shared');
+const { replyClean } = require('./_reply');
 const wallet = require('../../wallet.service');
 
 async function renderReferral(ctx) {
@@ -26,7 +27,7 @@ async function renderReferral(ctx) {
     '',
     `Teman terdaftar: ${stats.rows[0].n} • Total bonus: ${rupiah(stats.rows[0].total)}`,
   ].filter(Boolean);
-  await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
+  await replyClean(ctx, lines.join('\n'));
 }
 
 function registerReferralHandlers(bot) {

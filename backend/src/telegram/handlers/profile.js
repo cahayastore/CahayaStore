@@ -1,6 +1,7 @@
 'use strict';
 const { query } = require('../../db');
 const { ensureTelegramUser, escapeHtml, rupiah } = require('./_shared');
+const { replyClean } = require('./_reply');
 const wallet = require('../../wallet.service');
 
 async function renderProfile(ctx) {
@@ -18,7 +19,7 @@ async function renderProfile(ctx) {
     `Total pesanan: ${orders.rows[0].n}`,
     `Kode referral: <code>${escapeHtml(user.referral_code || '-')}</code>`,
   ];
-  await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
+  await replyClean(ctx, lines.join('\n'));
 }
 
 function registerProfileHandlers(bot) {

@@ -22,6 +22,7 @@ html.is-miniapp .category-strip,
 html.is-miniapp .why,
 html.is-miniapp .footer,
 html.is-miniapp .mk-bottom-nav,
+html.is-miniapp .cds-nav__mobile-search,
 html.is-miniapp .nav-mobile-search { display: none !important; }
 
 /* Remove the bottom padding reserved for the (now hidden) bottom nav. */

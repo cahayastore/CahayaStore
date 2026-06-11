@@ -1,7 +1,8 @@
 'use strict';
+const { replyClean } = require('./_reply');
 
 function registerHelpHandlers(bot) {
-  const help = (ctx) => ctx.reply(
+  const help = (ctx) => replyClean(ctx,
     'ℹ️ <b>Bantuan Cahaya Store</b>\n\n' +
     '/start — buka menu utama & toko\n' +
     '/products — lihat katalog\n' +
@@ -10,8 +11,7 @@ function registerHelpHandlers(bot) {
     '/saldo — cek saldo & top up\n' +
     '/referral — undang teman, dapat bonus\n' +
     '/profil — profil akun\n\n' +
-    'Pembayaran QRIS, produk dikirim instan setelah lunas.',
-    { parse_mode: 'HTML' }
+    'Pembayaran QRIS, produk dikirim instan setelah lunas.'
   );
   bot.command('bantuan', help);
   bot.command('help', help);

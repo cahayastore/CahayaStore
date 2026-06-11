@@ -1,9 +1,9 @@
 'use strict';
-const { InlineKeyboard } = require('grammy');
 const { query } = require('../../db');
-const { ensureTelegramUser, escapeHtml } = require('./_shared');
+const { ensureTelegramUser } = require('./_shared');
+const { showProductList, menuReplyKeyboard } = require('./v3-menu');
 
-function registerStartHandlers(bot, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
+function registerStartHandlers(bot) {
   bot.command('start', async (ctx) => {
     // Link / register the Telegram user.
     let user = null;
@@ -24,24 +24,12 @@ function registerStartHandlers(bot, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
       } catch (e) { console.error('[tg start ref]', e.message); }
     }
 
-    let welcome = 'Selamat datang di <b>Cahaya Store</b>! 🛍️\nMarketplace produk digital — pembayaran QRIS, kirim instan.';
+    // Single-screen UX (like Marketku): set the persistent "Menu" keyboard once,
+    // then show the numbered product list as the main screen. No extra menu spam.
     try {
-      const cfg = await query('SELECT welcome_message FROM bot_config WHERE id = 1');
-      if (cfg.rows[0]?.welcome_message) welcome = cfg.rows[0].welcome_message;
-    } catch { /* table may not exist yet */ }
-
-    const kb = new InlineKeyboard()
-      .webApp('🛒 Buka Toko', `${PRODUCT_DOMAIN}/?miniapp=1&v=${MINIAPP_VERSION || '1'}`).row()
-      .text('📦 Produk', 'menu:products').text('🗂️ Kategori', 'menu:categories').row()
-      .text('🧾 Pesanan', 'menu:orders').text('💰 Saldo', 'menu:saldo').row()
-      .text('🎁 Referral', 'menu:referral').text('❓ Bantuan', 'menu:help');
-
-    await ctx.reply(welcome, { parse_mode: 'HTML', reply_markup: kb });
-
-    // Show the v3 product list + persistent "Menu" reply keyboard.
+      await ctx.reply('🛍️ <b>Cahaya Store</b>', { parse_mode: 'HTML', reply_markup: menuReplyKeyboard() });
+    } catch (e) { console.error('[tg start kb]', e.message); }
     try {
-      const { showProductList, menuReplyKeyboard } = require('./v3-menu');
-      await ctx.reply('Pilih produk:', { reply_markup: menuReplyKeyboard() });
       await showProductList(ctx, 0);
     } catch (e) { console.error('[tg start v3]', e.message); }
   });
