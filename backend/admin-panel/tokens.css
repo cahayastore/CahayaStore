@@ -120,3 +120,38 @@
   --mkd-bg-animated-spot-b: radial-gradient(circle at 86% 12%, color-mix(in srgb, var(--color-info) 9%, transparent), transparent 24%);
   --mkd-bg-animated: var(--mkd-bg-animated-spot-a), var(--mkd-bg-animated-spot-b), var(--mkd-bg-animated-base);
 }
+
+/* ─ Dark theme: override base --color-* only; mkd-*/ds-* derive from them ─ */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: #0D1320;
+  --color-surface: #151C2B;
+  --color-surface-soft: #1B2434;
+  --color-surface-dim: #161E2C;
+  --color-surface-raised: #1F2937;
+  --color-border: #2A3342;
+  --color-border-hover: #3A4556;
+  --color-text-primary: #E8EDF5;
+  --color-text-secondary: #B3BCCB;
+  --color-text-muted: #8B97A8;
+  --color-text-subtle: #6B7686;
+  --color-primary: #4F93E8;
+  --color-primary-hover: #5C9EEF;
+  --color-primary-dark: #3B7FD6;
+  --color-primary-soft: #1B2B44;
+  --color-success: #34D399;
+  --color-success-soft: #11271F;
+  --color-warning: #FBBF24;
+  --color-warning-soft: #2A2210;
+  --color-danger: #F87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.12);
+  --color-info: #38BDF8;
+  --color-info-soft: #0E2433;
+
+  --mkd-focus-ring: rgba(79, 147, 232, 0.28);
+  --mkd-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --mkd-shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --mkd-shadow-elevated: 0 10px 30px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
+  --ds-color-textInverse: #0D1320;
+}

@@ -1,6 +1,7 @@
 /* Page shell: sidebar + topbar + main content */
 import { el } from './dom.js';
 import { session } from './api.js';
+import { currentTheme, toggleTheme } from './theme.js';
 
 const NAV = [
   { hash: '/dashboard', label: 'Dashboard', icon: '🏠' },
@@ -49,10 +50,26 @@ function buildSidebar(currentHash, user) {
   );
 }
 
+function themeToggleButton() {
+  const dark = currentTheme() === 'dark';
+  const btn = el('button', {
+    class: 'btn ghost small theme-toggle',
+    type: 'button',
+    title: dark ? 'Mode terang' : 'Mode gelap',
+    'aria-label': 'Ganti tema',
+  }, dark ? '☀️' : '🌙');
+  btn.addEventListener('click', () => {
+    const next = toggleTheme();
+    btn.textContent = next === 'dark' ? '☀️' : '🌙';
+    btn.title = next === 'dark' ? 'Mode terang' : 'Mode gelap';
+  });
+  return btn;
+}
+
 function buildTopbar(currentHash) {
   return el('header', { class: 'topbar' },
     el('div', { class: 'breadcrumb' }, 'Admin · ' + currentBreadcrumb(currentHash)),
-    el('div', { class: 'topbar-actions' }, logoutButton())
+    el('div', { class: 'topbar-actions' }, themeToggleButton(), logoutButton())
   );
 }
 

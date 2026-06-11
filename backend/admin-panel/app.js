@@ -1,4 +1,5 @@
 /* Cahaya Store Admin Panel — entry + router */
+import './theme.js';
 import { session } from './api.js';
 import { pageLogin } from './pages/login.js';
 import { pageDashboard } from './pages/dashboard.js';
