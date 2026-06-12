@@ -213,6 +213,7 @@ function renderPreview(products) {
 function bindSearch() {
   const inputs = Array.from(document.querySelectorAll('[data-search-input]'));
   const forms = Array.from(document.querySelectorAll('[data-search-form]'));
+  const productsSection = document.querySelector('.products-section');
   const filter = (value) => {
     const query = text(value).toLowerCase();
     // Keep all search inputs (desktop + mobile) in sync.
@@ -221,6 +222,10 @@ function bindSearch() {
       const haystack = `${card.dataset.name || ''} ${card.dataset.category || ''}`;
       card.hidden = query ? !haystack.includes(query) : false;
     });
+    // In mini app mode, show products section when user searches.
+    if (query && productsSection) {
+      productsSection.classList.add('is-visible');
+    }
   };
   inputs.forEach((input) => {
     input.addEventListener('input', () => filter(input.value));
@@ -243,6 +248,7 @@ function bindSearch() {
 }
 
 function bindCategoryFilter() {
+  const productsSection = document.querySelector('.products-section');
   document.querySelectorAll('[data-category-link]').forEach((link) => {
     link.addEventListener('click', () => {
       const category = link.dataset.categoryLink || '';
@@ -251,6 +257,14 @@ function bindCategoryFilter() {
       document.querySelectorAll('[data-product-card]').forEach((card) => {
         card.hidden = (card.dataset.category || '') !== category;
       });
+      // In mini app mode, show products section when user clicks category.
+      if (productsSection) {
+        productsSection.classList.add('is-visible');
+        // Scroll to products after a brief delay to let the layout settle.
+        setTimeout(() => {
+          document.querySelector('#products')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
     });
   });
 }
