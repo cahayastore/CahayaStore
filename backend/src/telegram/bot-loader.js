@@ -155,7 +155,7 @@ async function registerWebhook() {
       menu_button: {
         type: 'web_app',
         text: 'Buka Toko',
-        web_app: { url: `${PRODUCT_DOMAIN}/?miniapp=1&v=${MINIAPP_VERSION}` },
+        web_app: { url: `${PRODUCT_DOMAIN}/miniapp.html?v=${MINIAPP_VERSION}` },
       },
     });
   } catch (e) { console.warn('[tg setChatMenuButton]', e.message); }

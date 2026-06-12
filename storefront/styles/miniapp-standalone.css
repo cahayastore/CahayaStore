@@ -1,0 +1,302 @@
+/* ============================================================
+   Cahaya Store — Telegram Mini App Standalone Styles
+   Self-contained CSS for mini app, no dependencies
+   ============================================================ */
+
+/* CSS Variables — Light & Dark Mode */
+:root {
+  --tma-bg: #f4f6f9;
+  --tma-surface: rgba(255, 255, 255, 0.88);
+  --tma-surface-solid: #ffffff;
+  --tma-border: rgba(15, 23, 42, 0.08);
+  --tma-border-strong: rgba(15, 23, 42, 0.15);
+  --tma-text: #0f172a;
+  --tma-text-secondary: #475569;
+  --tma-text-muted: #94a3b8;
+  --tma-primary: #307fe2;
+  --tma-primary-dark: #1d4ed8;
+  --tma-font: 'Exo 2', system-ui, -apple-system, sans-serif;
+}
+
+:root[data-theme="dark"] {
+  --tma-bg: #0d1320;
+  --tma-surface: rgba(21, 28, 43, 0.92);
+  --tma-surface-solid: #151c2b;
+  --tma-border: rgba(255, 255, 255, 0.06);
+  --tma-border-strong: rgba(255, 255, 255, 0.12);
+  --tma-text: #f1f5f9;
+  --tma-text-secondary: #cbd5e1;
+  --tma-text-muted: #64748b;
+  --tma-primary: #3b82f6;
+  --tma-primary-dark: #2563eb;
+}
+
+/* Base Styles */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--tma-font);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--tma-text);
+  background: var(--tma-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+img { max-width: 100%; height: auto; display: block; }
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+/* Navbar */
+.tma-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: transparent;
+  padding: 12px 16px;
+}
+.tma-nav-inner {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 18px;
+  background: var(--tma-surface);
+  border: 1px solid var(--tma-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+.tma-logo {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.tma-logo img {
+  height: 32px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+/* Search Toggle Button */
+.tma-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: transparent;
+  border: 0;
+  color: var(--tma-text-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.tma-search-toggle:hover,
+.tma-search-toggle.active {
+  background: var(--tma-border);
+  color: var(--tma-primary);
+}
+.tma-search-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Collapsible Search Bar */
+.tma-search-wrap {
+  position: absolute;
+  top: 72px;
+  left: 16px;
+  right: 16px;
+  z-index: 60;
+  animation: tmaSearchSlideDown 0.2s ease-out;
+}
+.tma-search-wrap[hidden] {
+  display: none;
+}
+.tma-search {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 14px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--tma-surface-solid);
+  border: 1px solid var(--tma-border-strong);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+}
+.tma-search svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--tma-text-muted);
+}
+.tma-search input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--tma-text);
+  font-size: 14px;
+  font-family: var(--tma-font);
+}
+.tma-search input::placeholder {
+  color: var(--tma-text-muted);
+  opacity: 1;
+}
+.tma-search button {
+  min-width: 62px;
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--tma-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.tma-search button:hover {
+  background: var(--tma-primary-dark);
+}
+
+@keyframes tmaSearchSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Main Content */
+.tma-main {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 8px 16px 24px;
+}
+
+/* Products Section */
+.tma-products {
+  margin-top: 8px;
+}
+.tma-section-head {
+  margin-bottom: 16px;
+}
+.tma-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tma-text);
+  line-height: 1.3;
+}
+
+/* Product Grid */
+.tma-product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.tma-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--tma-text-muted);
+  font-size: 14px;
+}
+.tma-empty[hidden] {
+  display: none;
+}
+
+/* Product Card (reuse existing .product-card from catalog.js) */
+.product-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: var(--tma-surface);
+  border: 1px solid var(--tma-border);
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+.product-card-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: var(--tma-border);
+}
+.product-card-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.product-card-body {
+  padding: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.product-card-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tma-text);
+  line-height: 1.35;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.product-card-price {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tma-primary);
+  margin-top: auto;
+}
+.product-card-price-original {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--tma-text-muted);
+  text-decoration: line-through;
+  margin-left: 6px;
+}
+.product-card-stock {
+  font-size: 11px;
+  color: var(--tma-text-muted);
+  margin-top: 4px;
+}
+
+/* Responsive */
+@media (min-width: 480px) {
+  .tma-product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 600px) {
+  .tma-nav {
+    padding: 16px 20px;
+  }
+  .tma-main {
+    padding: 12px 20px 32px;
+  }
+}
