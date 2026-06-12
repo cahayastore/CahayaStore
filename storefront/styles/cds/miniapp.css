@@ -38,21 +38,77 @@ html.is-miniapp .products-section.is-visible {
   display: block;
 }
 html.is-miniapp .products-section .rail-head { margin-bottom: 14px; }
+
+/* Product grid & cards — optimized for mini app grid layout */
 html.is-miniapp .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
+  padding-bottom: 8px;
   overflow: visible;
 }
+
 html.is-miniapp .product-card {
-  flex: initial;
-  width: auto;
+  flex: unset;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  scroll-snap-align: initial;
+}
+
+/* Ensure media maintains aspect ratio in grid */
+html.is-miniapp .pc-media {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+}
+
+/* Adjust card body for better spacing */
+html.is-miniapp .pc-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Better text sizing in mini app */
+html.is-miniapp .pc-name {
+  font-size: 12.5px;
+  line-height: 16px;
+  min-height: 32px;
+}
+
+html.is-miniapp .pc-price {
+  font-size: 14px;
 }
 
 /* Bottom nav spacing — keep it visible in mini app! */
 html.is-miniapp body { padding-bottom: 80px; }
 html.is-miniapp .mk-bottom-nav { display: flex !important; }
 
+/* Responsive: 2 columns on mobile, 3+ on tablet/desktop */
 @media (max-width: 520px) {
-  html.is-miniapp .product-grid { grid-template-columns: repeat(2, 1fr); }
+  html.is-miniapp .product-grid { 
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  html.is-miniapp .pc-name {
+    font-size: 12px;
+    line-height: 15px;
+  }
+  html.is-miniapp .pc-price {
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 521px) and (max-width: 768px) {
+  html.is-miniapp .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 769px) {
+  html.is-miniapp .product-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
