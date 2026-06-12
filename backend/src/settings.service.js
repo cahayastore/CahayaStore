@@ -8,7 +8,8 @@ const KEYS = {
   TELEGRAM_BOT: 'telegram.bot',       // { token, username, webhook_secret }
   STORE_PROFILE: 'store.profile',     // { name, description, telegram_link, support_email }
   STORE_BANNERS: 'store.banners',     // { items: [{ id, image_url, link, alt, active, order }] }
-  ORDER_POLICY: 'order.policy'        // { expiry_minutes }
+  ORDER_POLICY: 'order.policy',       // { expiry_minutes }
+  BOT_INFO_TEXT: 'bot.info_text'      // { text: string } - Info text shown when user clicks Info button
 };
 
 async function getSetting(key) {

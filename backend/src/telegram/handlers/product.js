@@ -4,6 +4,7 @@ const { query } = require('../../db');
 const { escapeHtml, rupiah } = require('./_shared');
 const { showProductList } = require('./v3-menu');
 const { editOrReply, replyClean } = require('./_reply');
+const { getSetting, KEYS } = require('../../settings.service');
 
 async function showProductDetail(ctx, productId, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
   const r = await query(
@@ -57,10 +58,22 @@ function registerProductHandlers(bot, opts = {}) {
 
   bot.callbackQuery('v3:info', async (ctx) => {
     await ctx.answerCallbackQuery();
-    await editOrReply(ctx,
-      'ℹ️ <b>Cahaya Store</b>\nPembayaran QRIS, produk dikirim instan setelah lunas.\n' +
-      'Tekan tombol angka untuk lihat produk, lalu "Beli Sekarang".'
-    );
+    
+    // Fetch info text from settings, fallback to default
+    const DEFAULT_INFO = 'ℹ️ <b>Cahaya Store</b>\nPembayaran QRIS, produk dikirim instan setelah lunas.\n' +
+      'Tekan tombol angka untuk lihat produk, lalu "Beli Sekarang".';
+    
+    let infoText = DEFAULT_INFO;
+    try {
+      const setting = await getSetting(KEYS.BOT_INFO_TEXT);
+      if (setting && setting.text) {
+        infoText = setting.text;
+      }
+    } catch (e) {
+      console.error('[v3:info] Failed to load setting:', e);
+    }
+    
+    await editOrReply(ctx, infoText);
   });
 }
 

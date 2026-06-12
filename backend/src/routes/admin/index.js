@@ -5,6 +5,7 @@ const { requireAuth } = require('../../auth.middleware');
 const router = express.Router();
 router.use(requireAuth(['owner', 'admin']));
 
+router.use(require('./ui.routes'));
 router.use(require('./dashboard.routes'));
 router.use(require('./products.routes'));
 router.use(require('./stocks.routes'));
