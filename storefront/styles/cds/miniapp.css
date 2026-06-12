@@ -1,8 +1,8 @@
 /* ============================================================
    CDS — Telegram Mini App layout overrides.
    Active only when <html class="is-miniapp"> (set by mini-app.js).
-   Goal: show categories + product catalog — like Marketku's mini app.
-   Hides banner, "cara order", footer, bottom-nav, and
+   Goal: show ONLY the product catalog — like Marketku's mini app.
+   Hides banner, categories, "cara order", footer, bottom-nav, and
    trims the navbar to logo + search.
    ============================================================ */
 
@@ -16,8 +16,9 @@ html.is-miniapp .cds-nav__inner {
 html.is-miniapp .cds-nav__actions { display: none; }
 html.is-miniapp .cds-nav__inner > .cds-nav__search-wrap { display: block; }
 
-/* Hide non-product sections (removed .category-strip from this list). */
+/* Hide non-product sections. */
 html.is-miniapp .banner-section,
+html.is-miniapp .category-strip,
 html.is-miniapp .why,
 html.is-miniapp .footer,
 html.is-miniapp .mk-bottom-nav,
@@ -27,24 +28,7 @@ html.is-miniapp .nav-mobile-search { display: none !important; }
 /* Remove the bottom padding reserved for the (now hidden) bottom nav. */
 html.is-miniapp body { padding-bottom: 16px; }
 
-/* Show categories in mini app mode with 3-column grid */
-html.is-miniapp .category-strip {
-  margin-top: 12px;
-  padding: 16px;
-}
-html.is-miniapp .category-strip .rail-head { margin-bottom: 12px; }
-html.is-miniapp .category-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  overflow: visible;
-}
-html.is-miniapp .category-card {
-  width: auto;
-  aspect-ratio: 1 / 1;
-}
-
-/* Make the product section compact */
+/* Make the product section the hero: full-width grid, no horizontal rail. */
 html.is-miniapp .products-section {
   margin-top: 12px;
 }
@@ -62,5 +46,4 @@ html.is-miniapp .product-card {
 
 @media (max-width: 520px) {
   html.is-miniapp .product-grid { grid-template-columns: repeat(2, 1fr); }
-  html.is-miniapp .category-grid { grid-template-columns: repeat(3, 1fr); }
 }
