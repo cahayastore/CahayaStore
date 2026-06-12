@@ -9,7 +9,7 @@ const { escapeHtml, rupiah } = require('./_shared');
 const { replyClean, editOrReply } = require('./_reply');
 
 const PAGE_SIZE = 15;
-const COLUMNS = 5;
+const COLUMNS = 1;
 
 function compactName(name, max = 30) {
   const t = String(name || 'Produk').replace(/\s+/g, ' ').trim();
