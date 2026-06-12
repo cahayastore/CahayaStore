@@ -57,10 +57,9 @@ function registerProductHandlers(bot, opts = {}) {
 
   bot.callbackQuery('v3:info', async (ctx) => {
     await ctx.answerCallbackQuery();
-    await ctx.reply(
+    await editOrReply(ctx,
       'ℹ️ <b>Cahaya Store</b>\nPembayaran QRIS, produk dikirim instan setelah lunas.\n' +
-      'Tekan tombol angka untuk lihat produk, lalu "Beli Sekarang".',
-      { parse_mode: 'HTML' }
+      'Tekan tombol angka untuk lihat produk, lalu "Beli Sekarang".'
     );
   });
 }
