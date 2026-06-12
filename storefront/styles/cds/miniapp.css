@@ -1,9 +1,9 @@
 /* ============================================================
    CDS — Telegram Mini App layout overrides.
-   Active only when <html class="is-miniapp"> (set by mini-app.js).
+   Active only when <html class= is-miniapp> (set by mini-app.js).
    Goal: show ONLY the product catalog — like Marketku's mini app.
-   Hides banner, categories, "cara order", footer, bottom-nav, and
-   trims the navbar to logo + search.
+   Hides banner, categories, \cara order\, footer, bottom-nav, and
+   trims the navbar to logo + search (collapsed by default).
    ============================================================ */
 
 html.is-miniapp .cds-nav { position: static; top: 0; }
@@ -11,10 +11,71 @@ html.is-miniapp .cds-nav__inner {
   margin-top: 8px;
   border-radius: 16px;
   grid-template-columns: 1fr auto;
+  position: relative;
 }
 /* Keep search + logo; drop the icon row + auth on mini app (Telegram chrome covers it). */
 html.is-miniapp .cds-nav__actions { display: none; }
-html.is-miniapp .cds-nav__inner > .cds-nav__search-wrap { display: block; }
+
+/* Hide search bar by default, show search toggle icon instead */
+html.is-miniapp .cds-nav__search-wrap { 
+  display: none;
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 400px;
+  z-index: 10;
+}
+
+/* Search toggle button - icon only */
+html.is-miniapp .cds-nav__search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: transparent;
+  border: 0;
+  color: var(--cds-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+html.is-miniapp .cds-nav__search-toggle:hover {
+  background: var(--cds-surface-soft);
+  color: var(--cds-primary);
+}
+html.is-miniapp .cds-nav__search-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* When search is expanded */
+html.is-miniapp.search-expanded .cds-nav__search-wrap {
+  display: block;
+  animation: searchSlideDown 0.2s ease-out;
+}
+html.is-miniapp.search-expanded .cds-nav__search-toggle {
+  color: var(--cds-primary);
+}
+
+/* Search bar styling when expanded in mini app */
+html.is-miniapp .cds-nav__search-wrap .cds-nav__search {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  border: 1px solid var(--cds-border-strong);
+}
+
+@keyframes searchSlideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
 
 /* Hide non-product sections. */
 html.is-miniapp .banner-section,
