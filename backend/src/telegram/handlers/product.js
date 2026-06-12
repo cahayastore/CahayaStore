@@ -40,7 +40,7 @@ function registerProductHandlers(bot, opts = {}) {
     await ctx.answerCallbackQuery();
     return showProductList(ctx, Number(ctx.match[1]), true);
   });
-  bot.callbackQuery('v3:tolist', async (ctx) => { await ctx.answerCallbackQuery(); return showProductList(ctx, 0); });
+  bot.callbackQuery('v3:tolist', async (ctx) => { await ctx.answerCallbackQuery(); return showProductList(ctx, 0, true); });
 
   // Product detail by id.
   bot.callbackQuery(/^v3:p:(.+)$/, async (ctx) => {
