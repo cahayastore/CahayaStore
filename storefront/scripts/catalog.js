@@ -173,7 +173,16 @@ function renderProducts(products) {
   const wrap = document.querySelector('[data-products]');
   const empty = document.querySelector('[data-empty-state]');
   if (!wrap) return;
-  wrap.innerHTML = products.map(productCard).join('');
+  // In-stock products first, out-of-stock last (stable within each group).
+  const ordered = products
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => {
+      const aOut = Number(a.p.stock) <= 0 ? 1 : 0;
+      const bOut = Number(b.p.stock) <= 0 ? 1 : 0;
+      return aOut - bOut || a.i - b.i;
+    })
+    .map((x) => x.p);
+  wrap.innerHTML = ordered.map(productCard).join('');
   if (empty) empty.hidden = products.length > 0;
   setText('[data-product-status]', products.length ? `${products.length} produk real-time` : 'Belum ada produk aktif');
   setText('[data-product-count]', String(products.length));
