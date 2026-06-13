@@ -38,7 +38,7 @@
     const wa = getTelegramWebApp();
     if (wa && wa.initData) return true;
     // Persisted identity means we launched from Telegram earlier this session.
-    try { if (sessionStorage.getItem('cs_tg_initdata')) return true; } catch (e) {}
+    try { if (localStorage.getItem('cs_tg_initdata')) return true; } catch (e) {}
     return queryFlag('miniapp') === '1' || queryFlag('tma') === '1';
   }
 
@@ -46,14 +46,14 @@
   const TG_USER_KEY = 'cs_tg_user';
   function persistTelegramIdentity(initData, user) {
     try {
-      if (initData) sessionStorage.setItem(TG_INITDATA_KEY, initData);
-      if (user) sessionStorage.setItem(TG_USER_KEY, JSON.stringify(user));
+      if (initData) localStorage.setItem(TG_INITDATA_KEY, initData);
+      if (user) localStorage.setItem(TG_USER_KEY, JSON.stringify(user));
     } catch (e) {}
   }
   function readPersistedTelegramIdentity() {
     let initData = '', user = null;
-    try { initData = sessionStorage.getItem(TG_INITDATA_KEY) || ''; } catch (e) {}
-    try { const u = sessionStorage.getItem(TG_USER_KEY); if (u) user = JSON.parse(u); } catch (e) {}
+    try { initData = localStorage.getItem(TG_INITDATA_KEY) || ''; } catch (e) {}
+    try { const u = localStorage.getItem(TG_USER_KEY); if (u) user = JSON.parse(u); } catch (e) {}
     return { initData, user };
   }
   function getTelegramMiniAppIdentity() {
