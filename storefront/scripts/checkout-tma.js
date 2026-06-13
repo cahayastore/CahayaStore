@@ -238,15 +238,22 @@ async function createOrder(email) {
   renderPaymentLoading();
   try {
     const telegramInitData = (window.CahayaMiniApp && window.CahayaMiniApp.getInitData && window.CahayaMiniApp.getInitData()) || undefined;
+    // Reuse the session created by miniapp-login on the launch page so the order
+    // attaches to the real Telegram-linked user (enables credential delivery).
+    let session = {};
+    try { session = JSON.parse(localStorage.getItem('cs_session') || '{}'); } catch (e) { session = {}; }
+    const headers = { 'Content-Type': 'application/json' };
+    if (session.accessToken) headers.Authorization = `Bearer ${session.accessToken}`;
     const res = await fetch(`${API}/public/web-checkout`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         email,
         paymentMethod: 'qris',
         items: [{ productId: state.product.id, quantity: state.qty }],
         customerNote: state.note || undefined,
         telegramInitData,
+        webSessionToken: session.webSessionToken || undefined,
       }),
     });
     const json = await res.json();
