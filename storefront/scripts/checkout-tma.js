@@ -194,47 +194,28 @@ function getTelegramEmail() {
   return '';
 }
 
-function renderStep2Email() {
-  state.step = 2;
-  const saved = getStoredEmail() || getTelegramEmail();
-  root().innerHTML = `
-    ${stepper(2)}
-    <div class="tma-co-field">
-      <label>Email untuk kirim produk</label>
-      <input type="email" class="tma-co-input" data-email value="${esc(saved)}" placeholder="email@contoh.com" />
-      <p class="tma-co-hint">Produk & bukti pembayaran dikirim ke email ini.</p>
-      <p class="tma-co-err" data-err></p>
-    </div>
-    <div class="tma-buybar">
-      <div class="tma-buybar-total">
-        <span class="tma-buybar-total-label">Total</span>
-        <span class="tma-buybar-total-value">${rupiah(num(state.product.price) * state.qty)}</span>
-      </div>
-      <button class="tma-buybar-btn" type="button" data-pay>
-        <span>Buat pembayaran</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
-      </button>
-    </div>`;
-  const input = root().querySelector('[data-email]');
-  const err = root().querySelector('[data-err]');
-  if (saved) setTimeout(() => createOrder(saved), 50); // auto-proceed if we already know email
-  root().querySelector('[data-pay]').addEventListener('click', () => {
-    const email = text(input.value);
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Email tidak valid.'; return; }
-    setStoredEmail(email);
-    createOrder(email);
-  });
+/* Always resolve an email so we can skip the email step entirely.
+   Priority: stored email → Telegram identity → stable per-device guest email. */
+function resolveCheckoutEmail() {
+  const stored = getStoredEmail();
+  if (stored && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(stored)) return stored;
+  const tg = getTelegramEmail();
+  if (tg) return tg;
+  let gid = '';
+  try { gid = localStorage.getItem('cs_guest_id') || ''; } catch {}
+  if (!gid) {
+    gid = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    try { localStorage.setItem('cs_guest_id', gid); } catch {}
+  }
+  return `${gid}@guest.cahayastore.me`;
 }
 
 async function startPayment() {
-  const email = getStoredEmail() || getTelegramEmail();
-  if (email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    state.step = 2;
-    renderPaymentLoading();
-    createOrder(email);
-  } else {
-    renderStep2Email();
-  }
+  // Skip the email step — generate/resolve an email behind the scenes and
+  // go straight to creating the QRIS payment.
+  state.step = 2;
+  renderPaymentLoading();
+  createOrder(resolveCheckoutEmail());
 }
 
 function renderPaymentLoading() {
