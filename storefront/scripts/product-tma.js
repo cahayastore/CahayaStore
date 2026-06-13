@@ -134,7 +134,7 @@ function render(product) {
   const buy = root.querySelector('[data-buy]');
   if (buy && stock > 0) {
     buy.addEventListener('click', () => {
-      location.href = `${PAY}/?product=${encodeURIComponent(product.id)}`;
+      location.href = `/checkout-tma.html?slug=${encodeURIComponent(product.slug || product.id)}`;
     });
   }
 }

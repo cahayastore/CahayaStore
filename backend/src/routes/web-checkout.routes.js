@@ -135,7 +135,7 @@ async function expireStaleOrders() {
 
 /* POST /api/public/web-checkout */
 router.post('/public/web-checkout', async (req, res) => {
-  const { email, customerWhatsapp, items } = req.body || {};
+  const { email, customerWhatsapp, items, customerNote } = req.body || {};
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(email))) {
     return res.status(400).json({ success: false, message: 'Email tidak valid.' });
   }
@@ -241,9 +241,9 @@ router.post('/public/web-checkout', async (req, res) => {
   try {
     const result = await tx(async (client) => {
       const o = await client.query(
-        `INSERT INTO orders (order_no, user_id, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token, expires_at, channel)
-         VALUES ($1,$2,$3,$4,$5,'pending_payment','pending',$6, now() + ($7 || ' minutes')::interval, $8) RETURNING *`,
-        [orderNo, customer.id, normEmail, customerWhatsapp || null, uniqueAmount, accessToken, String(expireMinutes), channel]
+        `INSERT INTO orders (order_no, user_id, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token, expires_at, channel, customer_note)
+         VALUES ($1,$2,$3,$4,$5,'pending_payment','pending',$6, now() + ($7 || ' minutes')::interval, $8, $9) RETURNING *`,
+        [orderNo, customer.id, normEmail, customerWhatsapp || null, uniqueAmount, accessToken, String(expireMinutes), channel, (customerNote ? String(customerNote).trim().slice(0, 500) : null)]
       );
       const order = o.rows[0];
       for (const ln of lines) {

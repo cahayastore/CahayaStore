@@ -3,26 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Detail Produk — Cahaya Store</title>
-  <meta name="description" content="Detail produk digital Cahaya Store via Telegram" />
+  <title>Checkout — Cahaya Store</title>
+  <meta name="description" content="Checkout produk digital Cahaya Store via Telegram" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/miniapp-standalone.css?v=20260613-smphoto" />
+  <link rel="stylesheet" href="/styles/miniapp-standalone.css?v=20260613-checkout" />
   <script src="/scripts/cds-theme.js?v=20260610-dark"></script>
   <script src="/scripts/mini-app.js?v=20260612-standalone"></script>
 </head>
-<body class="tma-body tma-detail-body">
+<body class="tma-body tma-checkout-body">
   <header class="tma-detail-topbar">
     <button type="button" class="tma-back" aria-label="Kembali" data-back>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
     </button>
+    <div class="tma-checkout-htitle">
+      <h1>Checkout Mini App</h1>
+      <span data-product-subtitle>Memuat…</span>
+    </div>
   </header>
 
-  <main class="tma-detail-main" data-detail>
+  <main class="tma-checkout-main" data-checkout>
     <div class="tma-detail-loading">Memuat produk…</div>
   </main>
 
-  <script type="module" src="/scripts/product-tma.js?v=20260613-checkout"></script>
+  <script type="module" src="/scripts/checkout-tma.js?v=20260613-checkout"></script>
 </body>
 </html>
