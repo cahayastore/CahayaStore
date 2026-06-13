@@ -99,6 +99,64 @@ async function deliverOrder(client, orderId) {
   await client.query("INSERT INTO deliveries (order_id, delivery_type, status) VALUES ($1,'manual','delivered')", [orderId]);
 }
 
+/* Deliver purchased credentials to the buyer via Telegram (best-effort). */
+async function deliverCredentialsToTelegram(orderId) {
+  try {
+    // Find buyer telegram id + order info.
+    const r = await query(
+      `SELECT o.order_no, o.total_amount, u.telegram_id
+         FROM orders o LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.id = $1`,
+      [orderId]
+    );
+    if (!r.rows.length) return;
+    const ord = r.rows[0];
+    if (!ord.telegram_id) return; // buyer not linked to Telegram
+
+    // Gather delivered stock items for this order.
+    const items = await query(
+      `SELECT oi.delivered_stock_id, oi.quantity, p.name AS product_name, p.stock_type,
+              s.content_type, s.encrypted_content
+         FROM order_items oi
+         LEFT JOIN products p ON p.id = oi.product_id
+         LEFT JOIN product_stocks s ON s.id = oi.delivered_stock_id
+        WHERE oi.order_id = $1`,
+      [orderId]
+    );
+
+    const { escapeHtml, notifyBuyer } = require('../telegram/bot-loader');
+    const lines = [
+      '✅ <b>Pembayaran berhasil!</b>',
+      `Order: <code>${escapeHtml(ord.order_no)}</code>`,
+      '',
+    ];
+    let hasContent = false;
+    for (const it of items.rows) {
+      lines.push(`📦 <b>${escapeHtml(it.product_name || 'Produk')}</b>`);
+      if (it.delivered_stock_id && it.encrypted_content) {
+        let content = '';
+        try { content = decryptString(it.encrypted_content); } catch { content = ''; }
+        if (content) {
+          hasContent = true;
+          const isUrl = /^https?:\/\/\S+$/i.test(content.trim());
+          if (isUrl) lines.push(`🔗 ${escapeHtml(content.trim())}`);
+          else lines.push(`<pre>${escapeHtml(content)}</pre>`);
+        }
+      } else {
+        lines.push('<i>Sedang diproses oleh admin.</i>');
+      }
+      lines.push('');
+    }
+    if (!hasContent && !items.rows.some((x) => x.delivered_stock_id)) {
+      lines.push('Produk akan segera diproses oleh admin.');
+    }
+    lines.push('Terima kasih sudah berbelanja di Cahaya Store! 🙏');
+    await notifyBuyer(ord.telegram_id, lines.join('\n'));
+  } catch (e) {
+    console.error('[deliverCredentialsToTelegram]', e.message);
+  }
+}
+
 /* Expire pending orders past their expiry window and release reserved stock. */
 async function expireStaleOrders() {
   return tx(async (client) => {
@@ -515,6 +573,12 @@ async function payhookHandler(req, res) {
         require('../telegram/bot-loader').notifyOrderPaid(result.paid)
           .catch((e) => console.error('[payhook notify]', e.message));
       } catch (e) { console.error('[payhook notify load]', e.message); }
+    }
+
+    // Deliver purchased credentials to the buyer via Telegram (non-blocking).
+    if (result.matched && !result.already && !result.isTopup && result.orderId) {
+      deliverCredentialsToTelegram(result.orderId)
+        .catch((e) => console.error('[payhook deliver tg]', e.message));
     }
 
     return res.json({ status: 'confirmed', invoice_number: result.orderNo, already: !!result.already });

@@ -289,7 +289,7 @@ function renderPaid(credentials, productName) {
       credHtml = `<pre class="tma-cred-box">${esc(credentials.content || credentials.code || '')}</pre>`;
     }
   } else {
-    credHtml = `<p class="tma-co-hint">Produk sedang diproses. Cek email kamu untuk detail.</p>`;
+    credHtml = `<p class="tma-co-hint" style="text-align:center">Detail produk dikirim ke chat Telegram kamu.</p>`;
   }
   root().innerHTML = `
     <div class="tma-paid">
