@@ -49,7 +49,7 @@ router.get('/products', async (_req, res) => {
 
 router.post('/products', async (req, res) => {
   try {
-    const { name, slug, description, price, original_price, image_url, product_type, category_id, stock_type, is_active = true } = req.body || {};
+    const { name, slug, description, price, original_price, image_url, product_type, category_id, stock_type, is_active = true, warranty_enabled = false, warranty_label } = req.body || {};
     if (!name || price == null || !product_type) {
       return res.status(400).json({ success: false, message: 'name, price, dan product_type wajib diisi.' });
     }
@@ -60,9 +60,9 @@ router.post('/products', async (req, res) => {
     // Slug auto-generated from name when not supplied, and always made unique.
     const finalSlug = await uniqueSlug(slug || name);
     const r = await query(
-      `INSERT INTO products (name, slug, description, price, original_price, image_url, product_type, category_id, stock_type, is_active)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,COALESCE($9,'manual'),$10) RETURNING *`,
-      [name, finalSlug, description || null, priceNum, original_price || null, image_url || null, product_type, category_id || null, stock_type || null, !!is_active]
+      `INSERT INTO products (name, slug, description, price, original_price, image_url, product_type, category_id, stock_type, is_active, warranty_enabled, warranty_label)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,COALESCE($9,'manual'),$10,$11,$12) RETURNING *`,
+      [name, finalSlug, description || null, priceNum, original_price || null, image_url || null, product_type, category_id || null, stock_type || null, !!is_active, !!warranty_enabled, (warranty_enabled && warranty_label) ? String(warranty_label).trim() : null]
     );
     res.status(201).json({ success: true, data: r.rows[0] });
   } catch (e) {
@@ -95,12 +95,16 @@ router.put('/products/:id', async (req, res) => {
          category_id = COALESCE($9,category_id),
          stock_type = COALESCE($10,stock_type),
          is_active = COALESCE($11,is_active),
+         warranty_enabled = COALESCE($12,warranty_enabled),
+         warranty_label = $13,
          updated_at = now()
        WHERE id = $1 RETURNING *`,
       [req.params.id, f.name ?? null, slug, f.description ?? null, f.price ?? null,
        f.original_price ?? null, f.image_url ?? null,
        f.product_type ?? null, f.category_id ?? null, f.stock_type ?? null,
-       typeof f.is_active === 'boolean' ? f.is_active : null]
+       typeof f.is_active === 'boolean' ? f.is_active : null,
+       typeof f.warranty_enabled === 'boolean' ? f.warranty_enabled : null,
+       (f.warranty_enabled && f.warranty_label) ? String(f.warranty_label).trim() : null]
     );
     if (!r.rows.length) return res.status(404).json({ success: false, message: 'Produk tidak ditemukan.' });
     res.json({ success: true, data: r.rows[0] });

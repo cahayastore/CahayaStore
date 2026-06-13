@@ -78,13 +78,24 @@ function render(product) {
   const pct = hasDiscount ? Math.round((1 - price / original) * 100) : 0;
   const stock = num(product.stock_count);
   const category = text(product.category_name || product.product_type, 'Produk Digital');
-  const warranty = text(product.warranty_label || product.warranty || 'Garansi Login');
+  const warrantyOn = product.warranty_enabled === true;
+  const warranty = text(product.warranty_label, 'Garansi');
 
   document.title = `${text(product.name)} — Cahaya Store`;
 
   const media = product.image_url
     ? `<img src="${esc(product.image_url)}" alt="${esc(product.name)}" />`
     : `<span class="tma-detail-initial">${esc(initial(product.name))}</span>`;
+
+  const warrantyHtml = warrantyOn ? `
+    <div class="tma-detail-warranty">
+      <div class="tma-warranty-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
+        <span class="tma-warranty-title">Garansi</span>
+        <span class="tma-warranty-sub">Termasuk</span>
+      </div>
+      <span class="tma-warranty-pill">${esc(warranty)}</span>
+    </div>` : '';
 
   root.innerHTML = `
     <div class="tma-detail-hero">
@@ -102,14 +113,7 @@ function render(product) {
       </div>
     </div>
 
-    <div class="tma-detail-warranty">
-      <div class="tma-warranty-row">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
-        <span class="tma-warranty-title">Garansi</span>
-        <span class="tma-warranty-sub">Termasuk</span>
-      </div>
-      <span class="tma-warranty-pill">${esc(warranty)}</span>
-    </div>
+    ${warrantyHtml}
 
     <div class="tma-detail-desc">
       <h2 class="tma-detail-desc-title">Deskripsi</h2>

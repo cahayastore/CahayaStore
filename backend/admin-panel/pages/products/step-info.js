@@ -38,6 +38,32 @@ export function renderStepInfo(ctx) {
     oninput: (e) => setField('description', e.target.value)
   }, form.description || '');
 
+  // Warranty controls
+  const warrantyLabelField = el('div', {
+    class: 'field',
+    style: form.warranty_enabled ? '' : 'display:none'
+  },
+    el('label', {}, 'Label Garansi'),
+    el('input', {
+      name: 'warranty_label',
+      value: form.warranty_label || '',
+      placeholder: 'Contoh: Garansi Login, Garansi 7 Hari, Garansi Ganti Baru',
+      oninput: (e) => setField('warranty_label', e.target.value)
+    }),
+    el('div', { class: 'hint', style: 'margin-top:4px' },
+      'Teks ini tampil sebagai badge garansi di halaman produk.')
+  );
+
+  const warrantyToggle = el('input', {
+    type: 'checkbox',
+    name: 'warranty_enabled',
+    ...(form.warranty_enabled ? { checked: 'checked' } : {}),
+    onchange: (e) => {
+      setField('warranty_enabled', e.target.checked);
+      warrantyLabelField.style.display = e.target.checked ? '' : 'none';
+    }
+  });
+
   const imageUpload = buildImageUpload({
     value: form.image_url || '',
     preset: 'product',
@@ -76,7 +102,16 @@ export function renderStepInfo(ctx) {
     el('div', { class: 'field' }, el('label', {}, 'Gambar Produk'), imageUpload,
       el('div', { class: 'hint', style: 'margin-top:4px' },
         'Upload gambar (maks 4MB) atau tempel URL. Kosongkan untuk pakai inisial.')),
-    el('div', { class: 'field' }, el('label', {}, 'Deskripsi'), descInput)
+    el('div', { class: 'field' }, el('label', {}, 'Deskripsi'), descInput),
+    el('div', { class: 'field' },
+      el('label', { style: 'display:flex;align-items:center;gap:8px;cursor:pointer' },
+        warrantyToggle,
+        el('span', {}, 'Aktifkan Garansi')
+      ),
+      el('div', { class: 'hint', style: 'margin-top:4px' },
+        'Tampilkan badge garansi di halaman produk storefront & mini app.')
+    ),
+    warrantyLabelField
   );
 }
 

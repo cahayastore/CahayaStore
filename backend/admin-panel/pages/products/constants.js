@@ -93,6 +93,8 @@ export function createDefaultForm() {
     original_price: 0,
     image_url: '',
     is_active: true,
+    warranty_enabled: false,
+    warranty_label: '',
     // Stock items (raw textarea — di-parse pada submit)
     stock_items_raw: '',
   };
@@ -111,6 +113,8 @@ export function createFormFromProduct(p) {
     original_price: Number(p.original_price) || 0,
     image_url: p.image_url || '',
     is_active: p.is_active !== false,
+    warranty_enabled: p.warranty_enabled === true,
+    warranty_label: p.warranty_label || '',
     stock_items_raw: '', // edit mode tidak otomatis tambah stok lewat wizard
   };
 }
@@ -139,6 +143,8 @@ export function buildSubmission(form) {
     original_price: original > price ? original : null,
     image_url: (form.image_url || '').trim() || null,
     is_active: !!form.is_active,
+    warranty_enabled: !!form.warranty_enabled,
+    warranty_label: form.warranty_enabled ? ((form.warranty_label || '').trim() || 'Garansi') : null,
   };
 }
 

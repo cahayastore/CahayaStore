@@ -24,6 +24,7 @@ export function renderStepReview(ctx) {
   row('Kategori', catName);
   row('Harga', formatIDR(form.price));
   row('Status', form.is_active ? 'Aktif' : 'Nonaktif');
+  row('Garansi', form.warranty_enabled ? (form.warranty_label || 'Garansi') : 'Tidak ada');
   if (!isEdit) {
     row('Stok', 'Diisi setelah produk dibuat (tombol "Stok" di daftar produk)');
   }
