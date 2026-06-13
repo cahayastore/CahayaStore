@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get('/orders', async (_req, res) => {
   const r = await query(`
-    SELECT id, order_no, buyer_name, buyer_email, total_amount,
+    SELECT id, order_no, buyer_name, buyer_email, customer_note, total_amount,
            status, payment_status, created_at, paid_at
     FROM orders
     ORDER BY created_at DESC
