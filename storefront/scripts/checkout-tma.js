@@ -185,22 +185,27 @@ function getStoredEmail() {
 function setStoredEmail(v) { try { localStorage.setItem('cs_guest_email', v); } catch {} }
 
 function getTelegramEmail() {
-  // Telegram does not expose email; derive a stable placeholder from TG id when available.
+  // Telegram does not expose email. Use the buyer's username as identifier when
+  // available (so admin sees a recognizable handle), else fall back to TG id.
   try {
     const wa = window.Telegram && window.Telegram.WebApp;
     const u = wa && wa.initDataUnsafe && wa.initDataUnsafe.user;
+    if (u && u.username) {
+      const handle = String(u.username).toLowerCase().replace(/[^a-z0-9_]/g, '');
+      if (handle) return `${handle}@telegram.cahayastore.me`;
+    }
     if (u && u.id) return `tg${u.id}@telegram.cahayastore.me`;
   } catch {}
   return '';
 }
 
 /* Always resolve an email so we can skip the email step entirely.
-   Priority: stored email → Telegram identity → stable per-device guest email. */
+   Priority (mini app): Telegram username/id → stored email → guest email. */
 function resolveCheckoutEmail() {
-  const stored = getStoredEmail();
-  if (stored && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(stored)) return stored;
   const tg = getTelegramEmail();
   if (tg) return tg;
+  const stored = getStoredEmail();
+  if (stored && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(stored)) return stored;
   let gid = '';
   try { gid = localStorage.getItem('cs_guest_id') || ''; } catch {}
   if (!gid) {
