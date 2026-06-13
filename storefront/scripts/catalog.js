@@ -117,13 +117,15 @@ function soldLabel(product) {
 function productCard(product) {
   const pct = discountPercent(product);
   const href = `/produk/${encodeURIComponent(product.slug || product.id)}`;
-  return `<article class="product-card" data-product-card data-name="${escapeHtml(product.name.toLowerCase())}" data-category="${escapeHtml(product.category.toLowerCase())}">
+  const isOut = Number(product.stock) <= 0;
+  return `<article class="product-card${isOut ? ' is-out' : ''}" data-product-card data-name="${escapeHtml(product.name.toLowerCase())}" data-category="${escapeHtml(product.category.toLowerCase())}">
     <a class="pc-media" href="${href}" aria-label="${escapeHtml(product.name)}">
       ${pct > 0 ? `<span class="pc-discount">-${pct}%</span>` : ''}
       <button type="button" class="pc-wish" aria-label="Simpan ke wishlist" data-wish>
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 21s-6.7-4.35-9.33-8.06C.9 10.27 1.5 6.9 4.2 5.6c2-1 4.2-.3 5.4 1.2L12 9l2.4-2.2c1.2-1.5 3.4-2.2 5.4-1.2 2.7 1.3 3.3 4.67 1.53 7.34C18.7 16.65 12 21 12 21z"/></svg>
       </button>
       ${productMedia(product)}
+      ${isOut ? '<span class="pc-out-overlay"><span class="pc-out-badge">KOSONG</span></span>' : ''}
     </a>
     <div class="pc-body">
       <span class="pc-cat">${escapeHtml(product.category)}</span>
@@ -135,7 +137,7 @@ function productCard(product) {
       <div class="pc-foot">
         <span class="pc-rating">★ ${product.sold > 0 ? '0' : '0'}</span>
         <span class="pc-sep">|</span>
-        <span class="pc-sold">${escapeHtml(soldLabel(product))}</span>
+        <span class="pc-sold">${isOut ? 'Stok habis' : escapeHtml(soldLabel(product))}</span>
       </div>
     </div>
   </article>`;
