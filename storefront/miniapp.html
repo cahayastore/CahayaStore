@@ -94,7 +94,7 @@
         const m = href.match(/\/produk\/([^/?#]+)/i);
         if (!m) return;
         e.preventDefault();
-        location.href = `/produk-tma.html?slug=${encodeURIComponent(m[1])}`;
+        location.href = `/produk-tma.html?slug=${encodeURIComponent(m[1])}&tma=1`;
       });
     })();
   </script>

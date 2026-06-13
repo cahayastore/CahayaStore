@@ -66,7 +66,7 @@ function goBack() {
     return;
   }
   const slug = state.product?.slug || getProductKey();
-  if (slug) { location.href = `/produk-tma.html?slug=${encodeURIComponent(slug)}`; return; }
+  if (slug) { location.href = `/produk-tma.html?slug=${encodeURIComponent(slug)}&tma=1`; return; }
   location.href = '/miniapp.html';
 }
 
@@ -220,6 +220,13 @@ async function startPayment() {
   // go straight to creating the QRIS payment.
   state.step = 2;
   renderPaymentLoading();
+  // Ensure the Telegram WebApp script is loaded and initData is available so the
+  // order is attributed to the buyer's Telegram account (for credential delivery).
+  try {
+    if (window.CahayaMiniApp && window.CahayaMiniApp.waitForTelegramMiniAppIdentity) {
+      await window.CahayaMiniApp.waitForTelegramMiniAppIdentity(3500);
+    }
+  } catch {}
   createOrder(resolveCheckoutEmail());
 }
 
