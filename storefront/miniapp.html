@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/miniapp-standalone.css?v=20260613-outstock" />
+  <link rel="stylesheet" href="/styles/miniapp-standalone.css?v=20260613-cardclick" />
   <script src="/scripts/cds-theme.js?v=20260610-dark"></script>
   <script src="/scripts/mini-app.js?v=20260612-standalone"></script>
 </head>
@@ -43,7 +43,7 @@
     </section>
   </main>
 
-  <script type="module" src="/scripts/catalog.js?v=20260613-sortstock"></script>
+  <script type="module" src="/scripts/catalog.js?v=20260613-cardclick"></script>
   <script>
     // Mini app specific initialization
     (function() {
@@ -87,9 +87,10 @@
       // Route product card clicks to the mini app detail page.
       document.addEventListener('click', (e) => {
         if (e.target.closest('[data-wish]')) return; // let wishlist button work
-        const link = e.target.closest('.pc-media[href]');
-        if (!link) return;
-        const href = link.getAttribute('href') || '';
+        const card = e.target.closest('.product-card');
+        if (!card) return;
+        const link = card.querySelector('.pc-media[href]');
+        const href = link ? (link.getAttribute('href') || '') : '';
         const m = href.match(/\/produk\/([^/?#]+)/i);
         if (!m) return;
         e.preventDefault();
