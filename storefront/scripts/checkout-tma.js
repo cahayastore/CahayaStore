@@ -104,6 +104,11 @@ function renderStep1() {
   const warrantyOn = p.warranty_enabled === true;
   const warranty = text(p.warranty_label, 'Garansi');
   const category = text(p.category_name || p.product_type, 'Produk Digital');
+  const stock = Math.max(0, num(p.stock_count));
+  const maxQty = Math.max(1, Math.min(MAX_QTY, stock));
+  // Clamp current qty to available stock.
+  state.qty = Math.min(state.qty, maxQty);
+  const outOfStock = stock <= 0;
   const subtotal = price * state.qty;
 
   root().innerHTML = `
@@ -126,11 +131,11 @@ function renderStep1() {
     <div class="tma-co-field">
       <label>Jumlah pembelian</label>
       <div class="tma-qty">
-        <button type="button" class="tma-qty-btn" data-qty-dec aria-label="Kurangi">−</button>
+        <button type="button" class="tma-qty-btn" data-qty-dec aria-label="Kurangi" ${outOfStock ? 'disabled' : ''}>−</button>
         <span class="tma-qty-val" data-qty-val>${state.qty}</span>
-        <button type="button" class="tma-qty-btn" data-qty-inc aria-label="Tambah">+</button>
+        <button type="button" class="tma-qty-btn" data-qty-inc aria-label="Tambah" ${outOfStock || state.qty >= maxQty ? 'disabled' : ''}>+</button>
       </div>
-      <p class="tma-co-hint">Produk on-demand, maksimal ${MAX_QTY} item per checkout.</p>
+      <p class="tma-co-hint" data-stock-hint>${outOfStock ? 'Stok habis — produk tidak tersedia.' : `Stok tersedia: ${stock}. Maksimal ${maxQty} item per checkout.`}</p>
     </div>
 
     <div class="tma-co-field">
@@ -143,28 +148,34 @@ function renderStep1() {
         <span class="tma-buybar-total-label">Subtotal</span>
         <span class="tma-buybar-total-value" data-subtotal>${rupiah(subtotal)}</span>
       </div>
-      <button class="tma-buybar-btn" type="button" data-next>
-        <span>Lanjut ke pembayaran</span>
+      <button class="tma-buybar-btn" type="button" data-next ${outOfStock ? 'disabled' : ''}>
+        <span>${outOfStock ? 'Stok habis' : 'Lanjut ke pembayaran'}</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
       </button>
     </div>`;
 
   const valEl = root().querySelector('[data-qty-val]');
   const subEl = root().querySelector('[data-subtotal]');
+  const decBtn = root().querySelector('[data-qty-dec]');
+  const incBtn = root().querySelector('[data-qty-inc]');
   const refresh = () => {
     valEl.textContent = state.qty;
     subEl.textContent = rupiah(price * state.qty);
+    if (decBtn) decBtn.disabled = outOfStock || state.qty <= 1;
+    if (incBtn) incBtn.disabled = outOfStock || state.qty >= maxQty;
   };
-  root().querySelector('[data-qty-dec]').addEventListener('click', () => {
+  if (decBtn) decBtn.addEventListener('click', () => {
     state.qty = Math.max(1, state.qty - 1); refresh();
   });
-  root().querySelector('[data-qty-inc]').addEventListener('click', () => {
-    state.qty = Math.min(MAX_QTY, state.qty + 1); refresh();
+  if (incBtn) incBtn.addEventListener('click', () => {
+    state.qty = Math.min(maxQty, state.qty + 1); refresh();
   });
   root().querySelector('[data-note]').addEventListener('input', (e) => {
     state.note = e.target.value;
   });
-  root().querySelector('[data-next]').addEventListener('click', startPayment);
+  const nextBtn = root().querySelector('[data-next]');
+  if (nextBtn && !outOfStock) nextBtn.addEventListener('click', startPayment);
+  refresh();
 }
 
 /* ── Step 2: payment (create order + QRIS + poll) ────── */
