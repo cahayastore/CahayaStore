@@ -494,8 +494,10 @@ a { color: inherit; text-decoration: none; }
 .tma-detail-thumb {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 10;
-  border-radius: 22px;
+  max-width: 200px;
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
   overflow: hidden;
   background:
     radial-gradient(120% 120% at 50% 0%, rgba(48, 127, 226, 0.16), transparent 60%),
