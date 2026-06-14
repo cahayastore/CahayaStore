@@ -25,7 +25,7 @@ async function showProductDetail(ctx, productId, { PRODUCT_DOMAIN, MINIAPP_VERSI
     `Stok: ${inStock ? '✅ tersedia' : '❌ habis'}\n\n` +
     `${escapeHtml(p.description || '').slice(0, 600)}`;
   const kb = new InlineKeyboard()
-    .webApp('🛒 Beli Sekarang', `${PRODUCT_DOMAIN}/produk/${encodeURIComponent(p.slug)}?miniapp=1&v=${MINIAPP_VERSION || '1'}`).row()
+    .text('🛒 Beli Sekarang', `v3:buy:${productId}`).row()
     .text('← Kembali', 'v3:tolist');
   await editOrReply(ctx, text, { reply_markup: kb });
 }

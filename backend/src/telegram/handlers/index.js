@@ -3,6 +3,7 @@
 const { registerStartHandlers } = require('./start');
 const { registerCategoryHandlers } = require('./category');
 const { registerProductHandlers } = require('./product');
+const { registerBuyHandlers } = require('./buy');
 const { registerOrdersHandlers } = require('./orders');
 const { registerTopupHandlers } = require('./topup');
 const { registerProfileHandlers } = require('./profile');
@@ -15,6 +16,7 @@ function registerHandlers(bot, opts = {}) {
   registerStartHandlers(bot, opts);
   registerCategoryHandlers(bot, opts);
   registerProductHandlers(bot, opts);
+  registerBuyHandlers(bot, opts);
   registerOrdersHandlers(bot, opts);
   registerTopupHandlers(bot, opts);
   registerProfileHandlers(bot, opts);

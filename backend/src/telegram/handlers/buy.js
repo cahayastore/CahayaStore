@@ -1,0 +1,164 @@
+'use strict';
+/* ════════════════════════════════════════════════════════════════════
+   In-bot buy flow (no mini app). Flow stays inside the Telegram chat:
+     Beli Sekarang → pilih jumlah → buat order → tampilkan QRIS →
+     cek status → (kredensial dikirim otomatis saat lunas via webhook).
+   Identity = ctx.from (the Telegram user), so the order + credential
+   delivery always belong to the buyer who pressed the button.
+   ════════════════════════════════════════════════════════════════════ */
+const { InlineKeyboard } = require('grammy');
+const { query } = require('../../db');
+const { escapeHtml, rupiah, ensureTelegramUser } = require('./_shared');
+const { editOrReply, replyClean, replyEphemeral } = require('./_reply');
+const { createOrderForCustomer } = require('../../checkout.service');
+
+const MAX_QTY = 100;
+const QR_IMG = (data) => `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=10&data=${encodeURIComponent(data)}`;
+
+async function fetchProduct(productId) {
+  const r = await query(
+    `SELECT p.id, p.name, p.slug, p.price, p.warranty_enabled, p.warranty_label,
+            count(s.id) FILTER (WHERE s.status='available') AS stock
+       FROM products p
+       LEFT JOIN product_stocks s ON s.product_id = p.id
+      WHERE p.id = $1 AND p.is_active = TRUE
+      GROUP BY p.id`,
+    [productId]
+  );
+  return r.rows[0] || null;
+}
+
+/* Step 1: quantity selector for a product. */
+async function showQtySelector(ctx, productId, qty) {
+  const p = await fetchProduct(productId);
+  if (!p) return editOrReply(ctx, 'Produk tidak ditemukan.');
+  const stock = Number(p.stock);
+  if (stock <= 0) {
+    const kb = new InlineKeyboard().text('← Kembali', `v3:p:${productId}`);
+    return editOrReply(ctx, `🛍️ <b>${escapeHtml(p.name)}</b>\n\n❌ Stok habis.`, { reply_markup: kb });
+  }
+  const maxQty = Math.max(1, Math.min(MAX_QTY, stock));
+  const q = Math.max(1, Math.min(maxQty, Number(qty) || 1));
+  const subtotal = Number(p.price) * q;
+  const text =
+    `🛒 <b>${escapeHtml(p.name)}</b>\n` +
+    `Harga: <b>${rupiah(p.price)}</b>\n` +
+    `Stok tersedia: ${stock}\n\n` +
+    `Jumlah: <b>${q}</b>\n` +
+    `Subtotal: <b>${rupiah(subtotal)}</b>`;
+  const kb = new InlineKeyboard()
+    .text('➖', `v3:qty:${productId}:${Math.max(1, q - 1)}`)
+    .text(`${q}`, 'v3:noop')
+    .text('➕', `v3:qty:${productId}:${Math.min(maxQty, q + 1)}`).row()
+    .text(`✅ Buat Pesanan (${rupiah(subtotal)})`, `v3:order:${productId}:${q}`).row()
+    .text('← Kembali', `v3:p:${productId}`);
+  return editOrReply(ctx, text, { reply_markup: kb });
+}
+
+/* Step 2: create order + show QRIS. */
+async function createAndShowQris(ctx, productId, qty) {
+  const p = await fetchProduct(productId);
+  if (!p) return editOrReply(ctx, 'Produk tidak ditemukan.');
+  const stock = Number(p.stock);
+  if (stock <= 0) return editOrReply(ctx, '❌ Stok habis.');
+  const q = Math.max(1, Math.min(Math.min(MAX_QTY, stock), Number(qty) || 1));
+
+  // Resolve the Telegram user as the order customer (has telegram_id).
+  let user = null;
+  try { user = await ensureTelegramUser(ctx.from); } catch (e) { console.error('[v3 buy ensureUser]', e.message); }
+  if (!user || !user.id) return editOrReply(ctx, 'Gagal memproses akun. Coba /start dulu.');
+
+  // Give the order a recognizable email when none exists.
+  const handle = ctx.from && ctx.from.username
+    ? String(ctx.from.username).toLowerCase().replace(/[^a-z0-9_]/g, '')
+    : '';
+  const email = user.email || (handle ? `${handle}@telegram.cahayastore.me` : `tg${ctx.from.id}@telegram.cahayastore.me`);
+
+  let res;
+  try {
+    res = await createOrderForCustomer({
+      customer: { id: user.id, email },
+      items: [{ productId: p.id, quantity: q }],
+      channel: 'telegram',
+    });
+  } catch (e) {
+    console.error('[v3 buy createOrder]', e.message);
+    return editOrReply(ctx, `Gagal membuat pesanan: ${escapeHtml(e.message)}`);
+  }
+
+  const caption =
+    `🧾 <b>Pesanan dibuat</b>\n` +
+    `Order: <code>${escapeHtml(res.orderNo)}</code>\n` +
+    `${escapeHtml(p.name)} × ${q}\n` +
+    `Total: <b>${rupiah(res.amount)}</b>\n\n` +
+    `Scan QRIS di atas untuk membayar. Setelah lunas, produk dikirim otomatis ke chat ini.`;
+  const kb = new InlineKeyboard()
+    .text('🔄 Cek Status Pembayaran', `v3:check:${res.orderNo}`).row()
+    .text('☰ Pesanan Saya', 'v3:orders');
+
+  if (res.qrisData) {
+    // Replace the current screen with a photo message (QRIS).
+    try { await ctx.deleteMessage(); } catch {}
+    const sent = await ctx.replyWithPhoto(QR_IMG(res.qrisData), { caption, parse_mode: 'HTML', reply_markup: kb });
+    if (ctx.session) ctx.session.lastBotMsgId = sent.message_id;
+    return sent;
+  }
+  // QRIS not configured — show text fallback.
+  return editOrReply(ctx,
+    caption + '\n\n⚠️ QRIS belum dikonfigurasi. Hubungi admin.', { reply_markup: kb });
+}
+
+/* Step 3: check payment status. */
+async function checkStatus(ctx, orderNo) {
+  const r = await query(
+    `SELECT o.id, o.payment_status, o.status,
+            (SELECT count(*) FROM order_items oi WHERE oi.order_id = o.id AND oi.delivered_stock_id IS NOT NULL) AS delivered
+       FROM orders o WHERE o.order_no = $1`,
+    [orderNo]
+  );
+  if (!r.rows.length) { try { await ctx.answerCallbackQuery({ text: 'Order tidak ditemukan.' }); } catch {} return; }
+  const o = r.rows[0];
+  const paid = String(o.payment_status).toLowerCase() === 'paid';
+  if (paid) {
+    try { await ctx.answerCallbackQuery({ text: '✅ Pembayaran diterima!' }); } catch {}
+    // Credentials are delivered automatically by the payment webhook. Show a
+    // confirmation screen here. (If webhook hasn't run yet, the credential
+    // message will still arrive shortly.)
+    const text =
+      `✅ <b>Pembayaran berhasil!</b>\n` +
+      `Order: <code>${escapeHtml(orderNo)}</code>\n\n` +
+      `Produk sedang dikirim ke chat ini. Cek pesan berikutnya. 🙏`;
+    const kb = new InlineKeyboard().text('☰ Pesanan Saya', 'v3:orders').text('🛍️ Menu', 'menu:products');
+    try { await ctx.deleteMessage(); } catch {}
+    return replyClean(ctx, text, { reply_markup: kb });
+  }
+  const expired = String(o.payment_status).toLowerCase() === 'expired' || String(o.status).toLowerCase() === 'expired';
+  try {
+    await ctx.answerCallbackQuery({
+      text: expired ? 'Pesanan kedaluwarsa. Silakan buat pesanan baru.' : '⏳ Belum ada pembayaran masuk. Coba lagi sebentar.',
+      show_alert: true,
+    });
+  } catch {}
+}
+
+function registerBuyHandlers(bot) {
+  bot.callbackQuery('v3:noop', async (ctx) => { try { await ctx.answerCallbackQuery(); } catch {} });
+
+  bot.callbackQuery(/^v3:buy:(.+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return showQtySelector(ctx, ctx.match[1], 1);
+  });
+  bot.callbackQuery(/^v3:qty:([^:]+):(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return showQtySelector(ctx, ctx.match[1], Number(ctx.match[2]));
+  });
+  bot.callbackQuery(/^v3:order:([^:]+):(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery({ text: 'Membuat pesanan…' });
+    return createAndShowQris(ctx, ctx.match[1], Number(ctx.match[2]));
+  });
+  bot.callbackQuery(/^v3:check:(.+)$/, async (ctx) => {
+    return checkStatus(ctx, ctx.match[1]);
+  });
+}
+
+module.exports = { registerBuyHandlers };
