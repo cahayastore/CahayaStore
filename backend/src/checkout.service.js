@@ -46,6 +46,25 @@ async function createOrderForCustomer({ customer, items, channel = 'web', custom
   if (pr.rows.length !== productIds.length) throw new Error('Sebagian produk tidak tersedia.');
   const pmap = new Map(pr.rows.map((p) => [p.id, p]));
 
+  // Enforce stock limit server-side: never allow ordering more than available.
+  for (const it of items) {
+    const pid = String(it.productId || it.product_id);
+    const qty = Math.max(1, Number(it.quantity || 1));
+    const sc = await query(
+      "SELECT count(*)::int AS n FROM product_stocks WHERE product_id = $1 AND status = 'available' AND (reserved_until IS NULL OR reserved_until < now())",
+      [pid]
+    );
+    const avail = sc.rows[0] ? Number(sc.rows[0].n) : 0;
+    if (qty > avail) {
+      const prod = pmap.get(pid);
+      const nm = prod ? prod.name : 'Produk';
+      const err = new Error(`Stok ${nm} tidak cukup. Tersedia ${avail}, diminta ${qty}.`);
+      err.code = 'INSUFFICIENT_STOCK';
+      err.available = avail;
+      throw err;
+    }
+  }
+
   let total = 0;
   const lines = items.map((i) => {
     const p = pmap.get(String(i.productId || i.product_id));

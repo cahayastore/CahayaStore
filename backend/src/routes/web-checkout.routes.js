@@ -86,8 +86,8 @@ async function deliverOrder(client, orderId) {
       }
       if (stock.rows.length) {
         await client.query(
-          "UPDATE product_stocks SET status='sold', sold_at=now(), reserved_until=NULL, reserved_order_id=NULL WHERE id = $1",
-          [stock.rows[0].id]
+          "UPDATE product_stocks SET status='sold', sold_at=now(), reserved_until=NULL, reserved_order_id=NULL, sold_order_id=$2 WHERE id = $1",
+          [stock.rows[0].id, orderId]
         );
         await client.query(
           "UPDATE order_items SET delivered_stock_id = $2 WHERE id = $1",
@@ -113,14 +113,16 @@ async function deliverCredentialsToTelegram(orderId) {
     const ord = r.rows[0];
     if (!ord.telegram_id) return; // buyer not linked to Telegram
 
-    // Gather delivered stock items for this order.
+    // Gather ALL delivered stock units for this order (qty>1 → multiple rows),
+    // joined to their product name. Uses product_stocks.sold_order_id which links
+    // every sold unit to the order (fixes "bought 3 but only 1 delivered").
     const items = await query(
-      `SELECT oi.delivered_stock_id, oi.quantity, p.name AS product_name, p.stock_type,
-              s.content_type, s.encrypted_content
-         FROM order_items oi
-         LEFT JOIN products p ON p.id = oi.product_id
-         LEFT JOIN product_stocks s ON s.id = oi.delivered_stock_id
-        WHERE oi.order_id = $1`,
+      `SELECT s.id AS stock_id, s.content_type, s.encrypted_content,
+              p.name AS product_name, p.stock_type
+         FROM product_stocks s
+         JOIN products p ON p.id = s.product_id
+        WHERE s.sold_order_id = $1
+        ORDER BY p.name, s.sold_at ASC`,
       [orderId]
     );
 
@@ -131,23 +133,29 @@ async function deliverCredentialsToTelegram(orderId) {
       '',
     ];
     let hasContent = false;
+    let lastProduct = null;
+    let unitNo = 0;
     for (const it of items.rows) {
-      lines.push(`📦 <b>${escapeHtml(it.product_name || 'Produk')}</b>`);
-      if (it.delivered_stock_id && it.encrypted_content) {
+      if (it.product_name !== lastProduct) {
+        lines.push(`📦 <b>${escapeHtml(it.product_name || 'Produk')}</b>`);
+        lastProduct = it.product_name;
+        unitNo = 0;
+      }
+      unitNo += 1;
+      if (it.encrypted_content) {
         let content = '';
         try { content = decryptString(it.encrypted_content); } catch { content = ''; }
         if (content) {
           hasContent = true;
           const isUrl = /^https?:\/\/\S+$/i.test(content.trim());
-          if (isUrl) lines.push(`🔗 ${escapeHtml(content.trim())}`);
-          else lines.push(`<pre>${escapeHtml(content)}</pre>`);
+          const label = `#${unitNo}`;
+          if (isUrl) lines.push(`${label} 🔗 ${escapeHtml(content.trim())}`);
+          else lines.push(`${label}\n<pre>${escapeHtml(content)}</pre>`);
         }
-      } else {
-        lines.push('<i>Sedang diproses oleh admin.</i>');
       }
       lines.push('');
     }
-    if (!hasContent && !items.rows.some((x) => x.delivered_stock_id)) {
+    if (!hasContent) {
       lines.push('Produk akan segera diproses oleh admin.');
     }
     lines.push('Terima kasih sudah berbelanja di Cahaya Store! 🙏');
@@ -425,22 +433,30 @@ router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
     });
   }
 
-  // Resolve delivered content (one-time stock item).
+  // Resolve ALL delivered content units for this order (qty>1 supported) via
+  // product_stocks.sold_order_id. Returns a single 'credentials' (first unit, for
+  // backward compatibility) plus a full 'items' array.
   let credentials = null;
   let stockType = row.stock_type || 'manual';
-  if (row.delivered_stock_id) {
-    const s = await query("SELECT content_type, encrypted_content FROM product_stocks WHERE id = $1", [row.delivered_stock_id]);
-    if (s.rows.length && s.rows[0].encrypted_content) {
-      let content = '';
-      try { content = decryptString(s.rows[0].encrypted_content); } catch { content = ''; }
-      const ct = s.rows[0].content_type;
-      const isUrl = /^https?:\/\/\S+$/i.test(content.trim());
-      if (isUrl) credentials = { type: 'link', stock_type: 'link', url: content.trim(), content: content.trim() };
-      else if (ct === 'code') credentials = { type: 'code', stock_type: 'code', code: content, content };
-      else if (ct === 'credential') credentials = { type: 'account', stock_type: 'account', content };
-      else credentials = { type: 'note', stock_type: 'note', content };
-      stockType = credentials.stock_type;
-    }
+  const items = [];
+  const sold = await query(
+    "SELECT content_type, encrypted_content FROM product_stocks WHERE sold_order_id = $1 ORDER BY sold_at ASC",
+    [row.id]
+  );
+  for (const st of sold.rows) {
+    if (!st.encrypted_content) continue;
+    let content = '';
+    try { content = decryptString(st.encrypted_content); } catch { content = ''; }
+    if (!content) continue;
+    const ct = st.content_type;
+    const isUrl = /^https?:\/\/\S+$/i.test(content.trim());
+    let cred;
+    if (isUrl) cred = { type: 'link', stock_type: 'link', url: content.trim(), content: content.trim() };
+    else if (ct === 'code') cred = { type: 'code', stock_type: 'code', code: content, content };
+    else if (ct === 'credential') cred = { type: 'account', stock_type: 'account', content };
+    else cred = { type: 'note', stock_type: 'note', content };
+    items.push(cred);
+    if (!credentials) { credentials = cred; stockType = cred.stock_type; }
   }
 
   res.json({
@@ -449,6 +465,7 @@ router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
       status: 'paid',
       productName: row.product_name,
       credentials,
+      items,
       stockType,
       deliveredAt: row.paid_at,
     },
