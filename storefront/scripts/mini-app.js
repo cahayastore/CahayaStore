@@ -112,7 +112,18 @@
       try { wa.ready(); } catch (e) {}
       try { wa.expand(); } catch (e) {}
       // Capture + persist identity as soon as it is available.
-      getTelegramMiniAppIdentity();
+      const _id = getTelegramMiniAppIdentity();
+      try {
+        const curId = _id && _id.user && _id.user.id ? String(_id.user.id) : '';
+        const prevId = localStorage.getItem('cs_tg_id') || '';
+        if (curId && prevId && curId !== prevId) {
+          localStorage.removeItem('cs_session');
+          localStorage.removeItem(TG_INITDATA_KEY);
+          localStorage.removeItem(TG_USER_KEY);
+          persistTelegramIdentity(_id.initData, _id.user);
+        }
+        if (curId) localStorage.setItem('cs_tg_id', curId);
+      } catch (e) {}
       applyTheme(wa);
       try { wa.onEvent && wa.onEvent('themeChanged', () => applyTheme(wa)); } catch (e) {}
     }
