@@ -90,7 +90,8 @@ async function createAndShowQris(ctx, productId, qty) {
     `🧾 <b>Pesanan dibuat</b>\n` +
     `Order: <code>${escapeHtml(res.orderNo)}</code>\n` +
     `${escapeHtml(p.name)} × ${q}\n` +
-    `Total: <b>${rupiah(res.amount)}</b>\n\n` +
+    `💳 Bayar <b>TEPAT</b>: <code>${rupiah(res.amount)}</code>\n` +
+    `<i>Nominal ini unik untuk pesananmu — bayar pas sampai digit terakhir agar otomatis terdeteksi.</i>\n\n` +
     `Scan QRIS di atas untuk membayar. Setelah lunas, produk dikirim otomatis ke chat ini.`;
   const kb = new InlineKeyboard()
     .text('🔄 Cek Status Pembayaran', `v3:check:${res.orderNo}`).row()

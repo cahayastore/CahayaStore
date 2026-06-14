@@ -132,26 +132,28 @@ async function deliverCredentialsToTelegram(orderId) {
       `Order: <code>${escapeHtml(ord.order_no)}</code>`,
       '',
     ];
+    // Group all delivered units per product into a SINGLE combined block so the
+    // buyer gets one tidy copyable list (one credential per line) instead of N cards.
     let hasContent = false;
-    let lastProduct = null;
-    let unitNo = 0;
+    const byProduct = new Map();
+    const order = [];
     for (const it of items.rows) {
-      if (it.product_name !== lastProduct) {
-        lines.push(`📦 <b>${escapeHtml(it.product_name || 'Produk')}</b>`);
-        lastProduct = it.product_name;
-        unitNo = 0;
-      }
-      unitNo += 1;
+      const name = it.product_name || 'Produk';
+      if (!byProduct.has(name)) { byProduct.set(name, []); order.push(name); }
       if (it.encrypted_content) {
         let content = '';
         try { content = decryptString(it.encrypted_content); } catch { content = ''; }
-        if (content) {
-          hasContent = true;
-          const isUrl = /^https?:\/\/\S+$/i.test(content.trim());
-          const label = `#${unitNo}`;
-          if (isUrl) lines.push(`${label} 🔗 ${escapeHtml(content.trim())}`);
-          else lines.push(`${label}\n<pre>${escapeHtml(content)}</pre>`);
-        }
+        if (content) byProduct.get(name).push(content.trim());
+      }
+    }
+    for (const name of order) {
+      const creds = byProduct.get(name) || [];
+      lines.push(`📦 <b>${escapeHtml(name)}</b>`);
+      if (creds.length) {
+        hasContent = true;
+        lines.push(`<pre>${escapeHtml(creds.join('\n'))}</pre>`);
+      } else {
+        lines.push('<i>Sedang diproses oleh admin.</i>');
       }
       lines.push('');
     }
