@@ -237,13 +237,18 @@ function renderPaymentLoading() {
 async function createOrder(email) {
   renderPaymentLoading();
   try {
-    const telegramInitData = (window.CahayaMiniApp && window.CahayaMiniApp.getInitData && window.CahayaMiniApp.getInitData()) || undefined;
-    // Reuse the session created by miniapp-login on the launch page so the order
-    // attaches to the real Telegram-linked user (enables credential delivery).
+    // Reuse the per-user session captured from the bot's /start menu button
+    // (cs_ws). When present it is the authoritative identity for THIS buyer.
     let session = {};
     try { session = JSON.parse(localStorage.getItem('cs_session') || '{}'); } catch (e) { session = {}; }
+    const hasStartSession = !!session.webSessionToken;
+    // Only fall back to initData when we DON'T have an authoritative /start token,
+    // because the Telegram webview can cache a stale initData from a previous account.
+    const telegramInitData = hasStartSession
+      ? undefined
+      : ((window.CahayaMiniApp && window.CahayaMiniApp.getInitData && window.CahayaMiniApp.getInitData()) || undefined);
     const headers = { 'Content-Type': 'application/json' };
-    if (session.accessToken) headers.Authorization = `Bearer ${session.accessToken}`;
+    if (session.accessToken && !hasStartSession) headers.Authorization = `Bearer ${session.accessToken}`;
     const res = await fetch(`${API}/public/web-checkout`, {
       method: 'POST',
       headers,

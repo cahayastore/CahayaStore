@@ -172,21 +172,19 @@
   function captureStartSession() {
     try {
       const ws = new URLSearchParams(location.search).get('cs_ws');
-      if (!ws) return;
-      let sess = {};
-      try { sess = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch (e) { sess = {}; }
-      if (sess.webSessionToken !== ws) {
-        localStorage.setItem(SESSION_KEY, JSON.stringify({ webSessionToken: ws }));
-      }
-    } catch (e) {}
+      if (!ws) return false;
+      // The /start token is authoritative; reset session entirely.
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ webSessionToken: ws }));
+      return true;
+    } catch (e) { return false; }
   }
 
   function boot() {
     if (!isMiniAppRuntime()) return;
     document.documentElement.classList.add('is-miniapp');
-    captureStartSession();
+    const hasStartToken = captureStartSession();
     prepareMiniAppRuntime().then(() => {
-      miniAppLogin().catch(() => {});
+      if (!hasStartToken) miniAppLogin().catch(() => {});
     });
   }
   // Add the class synchronously too (before DOMContentLoaded) to avoid a flash.
