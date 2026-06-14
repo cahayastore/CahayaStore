@@ -169,9 +169,22 @@
   }
 
   // Auto-prepare + auto-login as early as possible in Telegram.
+  function captureStartSession() {
+    try {
+      const ws = new URLSearchParams(location.search).get('cs_ws');
+      if (!ws) return;
+      let sess = {};
+      try { sess = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch (e) { sess = {}; }
+      if (sess.webSessionToken !== ws) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ webSessionToken: ws }));
+      }
+    } catch (e) {}
+  }
+
   function boot() {
     if (!isMiniAppRuntime()) return;
     document.documentElement.classList.add('is-miniapp');
+    captureStartSession();
     prepareMiniAppRuntime().then(() => {
       miniAppLogin().catch(() => {});
     });
