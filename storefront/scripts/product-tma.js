@@ -134,7 +134,7 @@ function render(product) {
   const buy = root.querySelector('[data-buy]');
   if (buy && stock > 0) {
     buy.addEventListener('click', () => {
-      location.href = `/checkout-tma.html?slug=${encodeURIComponent(product.slug || product.id)}&tma=1`;
+      location.href = (window.CahayaMiniApp && window.CahayaMiniApp.withStartWs ? window.CahayaMiniApp.withStartWs(`/checkout-tma.html?slug=${encodeURIComponent(product.slug || product.id)}&tma=1`) : `/checkout-tma.html?slug=${encodeURIComponent(product.slug || product.id)}&tma=1`);
     });
   }
 }

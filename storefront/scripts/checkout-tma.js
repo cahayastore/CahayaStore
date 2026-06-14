@@ -237,18 +237,23 @@ function renderPaymentLoading() {
 async function createOrder(email) {
   renderPaymentLoading();
   try {
-    // Reuse the per-user session captured from the bot's /start menu button
-    // (cs_ws). When present it is the authoritative identity for THIS buyer.
-    let session = {};
-    try { session = JSON.parse(localStorage.getItem('cs_session') || '{}'); } catch (e) { session = {}; }
-    const hasStartSession = !!session.webSessionToken;
+    // Authoritative buyer identity = the /start web-session token (cs_ws).
+    // Read it directly (URL → dedicated storage) via mini-app helper so it is
+    // immune to the stale cs_session that miniAppLogin may have overwritten.
+    let startWs = '';
+    try {
+      if (window.CahayaMiniApp && window.CahayaMiniApp.getStartWs) startWs = window.CahayaMiniApp.getStartWs() || '';
+    } catch (e) {}
+    if (!startWs) {
+      try { startWs = new URLSearchParams(location.search).get('cs_ws') || ''; } catch (e) {}
+    }
+    const hasStartSession = !!startWs;
     // Only fall back to initData when we DON'T have an authoritative /start token,
     // because the Telegram webview can cache a stale initData from a previous account.
     const telegramInitData = hasStartSession
       ? undefined
       : ((window.CahayaMiniApp && window.CahayaMiniApp.getInitData && window.CahayaMiniApp.getInitData()) || undefined);
     const headers = { 'Content-Type': 'application/json' };
-    if (session.accessToken && !hasStartSession) headers.Authorization = `Bearer ${session.accessToken}`;
     const res = await fetch(`${API}/public/web-checkout`, {
       method: 'POST',
       headers,
@@ -258,7 +263,7 @@ async function createOrder(email) {
         items: [{ productId: state.product.id, quantity: state.qty }],
         customerNote: state.note || undefined,
         telegramInitData,
-        webSessionToken: session.webSessionToken || undefined,
+        webSessionToken: startWs || undefined,
       }),
     });
     const json = await res.json();

@@ -169,14 +169,28 @@
   }
 
   // Auto-prepare + auto-login as early as possible in Telegram.
-  function captureStartSession() {
+  var START_WS_KEY = 'cs_start_ws';
+  function getStartWs() {
     try {
-      const ws = new URLSearchParams(location.search).get('cs_ws');
-      if (!ws) return false;
-      // The /start token is authoritative; reset session entirely.
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ webSessionToken: ws }));
-      return true;
-    } catch (e) { return false; }
+      var fromUrl = new URLSearchParams(location.search).get('cs_ws');
+      if (fromUrl) { localStorage.setItem(START_WS_KEY, fromUrl); return fromUrl; }
+    } catch (e) {}
+    try { return localStorage.getItem(START_WS_KEY) || ''; } catch (e) { return ''; }
+  }
+  function captureStartSession() {
+    var ws = getStartWs();
+    if (!ws) return false;
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify({ webSessionToken: ws })); } catch (e) {}
+    return true;
+  }
+  // Append the /start identity token to an in-app navigation URL so the
+  // authoritative buyer identity survives across pages even if storage is flaky.
+  function withStartWs(url) {
+    try {
+      var ws = getStartWs();
+      if (!ws) return url;
+      return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'cs_ws=' + encodeURIComponent(ws);
+    } catch (e) { return url; }
   }
 
   function boot() {
@@ -204,5 +218,7 @@
     prepareMiniAppRuntime,
     miniAppLogin,
     getInitData,
+    getStartWs,
+    withStartWs,
   };
 })();
