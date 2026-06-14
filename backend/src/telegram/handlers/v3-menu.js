@@ -66,10 +66,11 @@ function buildListKeyboard({ products, page, totalPages }) {
 }
 
 function menuReplyKeyboard() {
+  // Colored buttons (Bot API 9.4+): primary=blue, success=green, danger=red.
   return new Keyboard()
-    .text('🛍️ Produk').text('🗂️ Kategori').row()
-    .text('🧾 Pesanan').text('💰 Saldo').row()
-    .text('🎁 Referral').text('❕ Bantuan').row()
+    .text('🛍️ Produk').primary().text('🗂️ Kategori').primary().row()
+    .text('🧾 Pesanan').success().text('💰 Saldo').success().row()
+    .text('🎁 Referral').primary().text('❕ Bantuan').danger().row()
     .resized().persistent();
 }
 
