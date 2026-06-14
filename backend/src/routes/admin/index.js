@@ -11,6 +11,7 @@ router.use(require('./products.routes'));
 router.use(require('./stocks.routes'));
 router.use(require('./categories.routes'));
 router.use(require('./orders.routes'));
+router.use(require('./broadcast.routes'));
 router.use(require('./settings.routes'));
 router.use(require('./uploads.routes'));
 

@@ -11,6 +11,7 @@ const NAV = [
   { hash: '/orders', label: 'Pesanan', icon: '🧾' },
   { hash: '/banners', label: 'Banner', icon: '🖼️' },
   { hash: '/payment', label: 'Pembayaran', icon: '💳' },
+  { hash: '/broadcast', label: 'Broadcast', icon: '📣' },
   { hash: '/settings', label: 'Pengaturan', icon: '⚙️' }
 ];
 

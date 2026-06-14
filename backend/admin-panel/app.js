@@ -10,6 +10,7 @@ import { pageOrders } from './pages/orders.js';
 import { pageBanners } from './pages/banners.js';
 import { pagePayment } from './pages/payment.js';
 import { pageSettings } from './pages/settings.js';
+import { pageBroadcast } from './pages/broadcast.js';
 
 const ROUTES = {
   '#/login': pageLogin,
@@ -20,7 +21,8 @@ const ROUTES = {
   '#/orders': pageOrders,
   '#/banners': pageBanners,
   '#/payment': pagePayment,
-  '#/settings': pageSettings
+  '#/settings': pageSettings,
+  '#/broadcast': pageBroadcast
 };
 
 async function render() {
