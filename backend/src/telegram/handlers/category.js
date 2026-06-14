@@ -24,6 +24,7 @@ async function renderCategories(ctx) {
 
 function registerCategoryHandlers(bot) {
   bot.command('kategori', (ctx) => renderCategories(ctx));
+  bot.hears('🗂️ Kategori', (ctx) => renderCategories(ctx));
   bot.callbackQuery('menu:categories', async (ctx) => { await ctx.answerCallbackQuery(); return renderCategories(ctx); });
 
   bot.callbackQuery(/^cat:(.+)$/, async (ctx) => {

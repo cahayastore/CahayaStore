@@ -66,7 +66,11 @@ function buildListKeyboard({ products, page, totalPages }) {
 }
 
 function menuReplyKeyboard() {
-  return new Keyboard().text('Menu').resized().persistent();
+  return new Keyboard()
+    .text('🛍️ Produk').text('🗂️ Kategori').row()
+    .text('🧾 Pesanan').text('💰 Saldo').row()
+    .text('🎁 Referral').text('❕ Bantuan').row()
+    .resized().persistent();
 }
 
 async function showProductList(ctx, page = 0, edit = false) {

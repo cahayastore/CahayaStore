@@ -32,6 +32,7 @@ async function renderReferral(ctx) {
 
 function registerReferralHandlers(bot) {
   bot.command('referral', (ctx) => renderReferral(ctx));
+  bot.hears('🎁 Referral', (ctx) => renderReferral(ctx));
   bot.callbackQuery('menu:referral', async (ctx) => { await ctx.answerCallbackQuery(); return renderReferral(ctx); });
 }
 

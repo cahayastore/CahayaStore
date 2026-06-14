@@ -29,6 +29,7 @@ async function renderSaldo(ctx, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
 function registerTopupHandlers(bot, opts = {}) {
   bot.command('saldo', (ctx) => renderSaldo(ctx, opts));
   bot.command('topup', (ctx) => renderSaldo(ctx, opts));
+  bot.hears('💰 Saldo', (ctx) => renderSaldo(ctx, opts));
   bot.callbackQuery('menu:saldo', async (ctx) => { await ctx.answerCallbackQuery(); return renderSaldo(ctx, opts); });
 }
 

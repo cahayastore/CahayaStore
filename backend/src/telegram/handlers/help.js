@@ -14,6 +14,7 @@ function registerHelpHandlers(bot) {
     'Pembayaran QRIS, produk dikirim instan setelah lunas.'
   );
   bot.command('bantuan', help);
+  bot.hears('❕ Bantuan', help);
   bot.command('help', help);
   bot.callbackQuery('menu:help', async (ctx) => { await ctx.answerCallbackQuery(); return help(ctx); });
 }
