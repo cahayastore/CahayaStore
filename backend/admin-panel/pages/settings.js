@@ -2,6 +2,7 @@ import { el, alertBox, toast, collapseCard } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
 import { buildChangePasswordCard } from './settings/change-password.js';
+import { buildImageUpload } from '../upload-widget.js';
 
 const SECTIONS = [
   {
@@ -174,6 +175,66 @@ async function refreshTelegramStatus(form) {
   }
 }
 
+
+/* Bot banner: upload an image + optional caption, shown on /start in the bot. */
+function buildBannerCard() {
+  const form = el('form', {});
+  let imageUrl = '';
+  const preview = el('div', { class: 'field' });
+  const uploader = buildImageUpload({
+    value: '', preset: 'banner', previewClass: 'banner-preview',
+    onChange: (url) => { imageUrl = url || ''; },
+  });
+  const captionWrap = el('div', { class: 'field' },
+    el('label', {}, 'Caption Banner (opsional)'),
+    el('textarea', { name: 'caption', rows: '3', placeholder: 'Teks di bawah banner. Mendukung HTML: <b>tebal</b>, <i>miring</i>.' }, ''));
+  const status = alertBox('', ''); status.style.display = 'none';
+  const saveBtn = el('button', { class: 'btn primary', type: 'submit' }, 'Simpan Banner');
+  const clearBtn = el('button', { class: 'btn ghost', type: 'button', style: 'margin-left:8px' }, 'Hapus Banner');
+
+  form.appendChild(el('div', { class: 'field' }, el('label', {}, 'Gambar Banner'), uploader));
+  form.appendChild(captionWrap);
+  form.appendChild(status);
+  form.appendChild(el('div', {}, saveBtn, clearBtn));
+
+  // Load existing.
+  api('/api/admin/settings/bot.banner').then((r) => {
+    if (r && r.value) {
+      imageUrl = r.value.image_url || '';
+      if (r.value.caption) form.querySelector('[name="caption"]').value = r.value.caption;
+      if (imageUrl) {
+        const img = uploader.querySelector('img');
+        if (img) { img.src = imageUrl; img.style.display = ''; }
+      }
+    }
+  }).catch(() => {});
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const caption = (form.querySelector('[name="caption"]').value || '').trim() || null;
+    if (!imageUrl) { toast('Upload gambar banner dulu.', 'err'); return; }
+    try {
+      await api('/api/admin/settings/bot.banner', {
+        method: 'PUT', body: JSON.stringify({ value: { image_url: imageUrl, caption }, secret: false }),
+      });
+      toast('Banner tersimpan. Akan tampil saat user /start.', 'ok');
+    } catch (err) { toast(err.message, 'err'); }
+  });
+  clearBtn.addEventListener('click', async () => {
+    try {
+      await api('/api/admin/settings/bot.banner', {
+        method: 'PUT', body: JSON.stringify({ value: { image_url: null, caption: null }, secret: false }),
+      });
+      imageUrl = '';
+      const img = uploader.querySelector('img'); if (img) { img.src = ''; img.style.display = 'none'; }
+      form.querySelector('[name="caption"]').value = '';
+      toast('Banner dihapus.', 'ok');
+    } catch (err) { toast(err.message, 'err'); }
+  });
+
+  return collapseCard('Banner Bot Telegram', form, { open: false, subtitle: 'Gambar banner yang tampil saat user membuka bot (/start).' });
+}
+
 export async function pageSettings() {
   const wrap = el('div', {},
     el('div', { class: 'page-head' },
@@ -187,5 +248,6 @@ export async function pageSettings() {
   wrap.appendChild(collapseCard('Ubah Password', buildChangePasswordCard(), { open: false, subtitle: 'Keamanan akun admin' }));
   // Konfigurasi lain
   for (const s of SECTIONS) wrap.appendChild(buildSection(s));
+  wrap.appendChild(buildBannerCard());
   return shell(wrap);
 }

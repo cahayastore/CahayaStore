@@ -3,6 +3,7 @@ const { query } = require('../../db');
 const { ensureTelegramUser } = require('./_shared');
 const { showProductList, menuReplyKeyboard } = require('./v3-menu');
 const { issueWebSession } = require('../../customer-auth');
+const { getSetting, KEYS } = require('../../settings.service');
 
 const START_PRODUCT_DOMAIN = (process.env.PRODUCT_DOMAIN || 'https://cahayastore.me').replace(/\/+$/, '');
 const START_MINIAPP_VERSION = process.env.MINIAPP_VERSION || '1';
@@ -45,11 +46,23 @@ function registerStartHandlers(bot) {
       } catch (e) { console.error('[tg start ref]', e.message); }
     }
 
-    // Single-screen UX (like Marketku): set the persistent "Menu" keyboard once,
-    // then show the numbered product list as the main screen. No extra menu spam.
+    // Single-screen UX: show a banner (if configured) with the persistent colored
+    // menu keyboard, then the numbered product list. Banner is set in admin panel.
+    let banner = null;
+    try { banner = await getSetting(KEYS.BOT_BANNER); } catch (e) {}
+    const greeting = (banner && banner.caption) ? banner.caption : '🛍️ <b>Cahaya Store</b>';
     try {
-      await ctx.reply('🛍️ <b>Cahaya Store</b>', { parse_mode: 'HTML', reply_markup: menuReplyKeyboard() });
-    } catch (e) { console.error('[tg start kb]', e.message); }
+      if (banner && banner.image_url) {
+        await ctx.replyWithPhoto(banner.image_url, {
+          caption: greeting, parse_mode: 'HTML', reply_markup: menuReplyKeyboard(),
+        });
+      } else {
+        await ctx.reply(greeting, { parse_mode: 'HTML', reply_markup: menuReplyKeyboard() });
+      }
+    } catch (e) {
+      console.error('[tg start banner]', e.message);
+      try { await ctx.reply('🛍️ <b>Cahaya Store</b>', { parse_mode: 'HTML', reply_markup: menuReplyKeyboard() }); } catch (e2) {}
+    }
     try {
       await showProductList(ctx, 0);
     } catch (e) { console.error('[tg start v3]', e.message); }
