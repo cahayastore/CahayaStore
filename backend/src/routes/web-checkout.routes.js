@@ -239,13 +239,36 @@ router.post('/public/web-checkout', async (req, res) => {
     }
   } catch { uniqueAmount = total; }
 
+  // ── Resolve the authoritative Telegram identity FIRST (mini app) ──
+  // A valid initData represents the user CURRENTLY using the mini app and must
+  // win over any stale Bearer/web session left in localStorage from a previous
+  // account. This guarantees the order + credential delivery go to the right user.
+  let tgChannel = 'web';
+  let tgCustomer = null;
+  const _telegramInitData = req.body && req.body.telegramInitData;
+  if (_telegramInitData) {
+    try {
+      const { validateInitData } = require('../telegram/miniapp-auth');
+      const { ensureTelegramUser } = require('../telegram/handlers/_shared');
+      const v = await validateInitData(_telegramInitData);
+      if (v.ok && v.user && v.user.id) {
+        tgChannel = 'miniapp';
+        const tgDbUser = await ensureTelegramUser(v.user);
+        if (tgDbUser && tgDbUser.id) {
+          const full = await query("SELECT id, email, name, role, password_hash FROM users WHERE id = $1", [tgDbUser.id]);
+          if (full.rows.length) tgCustomer = full.rows[0];
+        }
+      }
+    } catch (e) { console.warn('[web-checkout telegram resolve]', e.message); }
+  }
+
   // ── Auto-register customer by email (passwordless). Never sets password. ──
-  // If already logged in, use that account. Otherwise upsert by email.
+  // Priority: verified Telegram user → existing session → upsert by email.
   const normEmail = String(email).toLowerCase().trim();
-  let customer = null;
-  const existingAuth = resolveCustomer(req);
+  let customer = tgCustomer;
+  const existingAuth = customer ? null : resolveCustomer(req);
   try {
-    if (existingAuth) {
+    if (!customer && existingAuth) {
       const u = await query("SELECT id, email, name, role, password_hash FROM users WHERE id = $1", [existingAuth.userId]);
       if (u.rows.length) customer = u.rows[0];
     }
@@ -273,26 +296,8 @@ router.post('/public/web-checkout', async (req, res) => {
   const gatewaySession = userHasPassword ? null : issueGatewaySession(customer);
   const webSessionToken = issueWebSession(customer);
 
-  // ── Channel attribution: Mini App checkout sends telegramInitData ──
-  let channel = 'web';
-  const telegramInitData = req.body && req.body.telegramInitData;
-  if (telegramInitData) {
-    try {
-      const { validateInitData } = require('../telegram/miniapp-auth');
-      const v = await validateInitData(telegramInitData);
-      if (v.ok && v.user && v.user.id) {
-        channel = 'miniapp';
-        // Link this Telegram id to the checkout customer (if not already linked elsewhere).
-        await query(
-          `UPDATE users SET telegram_id = $2,
-                 telegram_username = COALESCE($3, telegram_username), updated_at = now()
-             WHERE id = $1 AND telegram_id IS NULL
-               AND NOT EXISTS (SELECT 1 FROM users u2 WHERE u2.telegram_id = $2)`,
-          [customer.id, String(v.user.id), v.user.username || null]
-        );
-      }
-    } catch (e) { console.warn('[web-checkout telegram link]', e.message); }
-  }
+  // ── Channel attribution (already resolved above from initData) ──
+  const channel = tgChannel;
 
   const expireMinutes = await getExpireMinutes();
 
