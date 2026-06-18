@@ -136,3 +136,9 @@ setTimeout(() => {
     console.warn('[telegram] loader unavailable:', e.message);
   }
 }, 6000).unref();
+
+// Resume any broadcast left running before a restart (persistent jobs).
+setTimeout(() => {
+  try { require('./src/broadcast.service').resumePending(); }
+  catch (e) { console.warn('[broadcast] resume unavailable:', e.message); }
+}, 8000).unref();

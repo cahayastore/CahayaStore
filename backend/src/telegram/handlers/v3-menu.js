@@ -60,7 +60,7 @@ function buildListText({ products, page, totalPages }) {
 function menuReplyKeyboard() {
   return new Keyboard()
     .text('📦 Daftar Produk').primary().text('🎟️ Voucher').primary().text('📋 Pesanan Saya').primary().row()
-    .text('💰 Top Up').success().text('💸 Tarik Saldo').success().row()
+    .text('💰 Top Up').success().row()
     .text('👨‍💻 Bantuan').danger().row()
     .text('/start').danger().row()
     .resized().persistent();
@@ -84,7 +84,7 @@ function buildListReplyKeyboard({ itemCount, page, totalPages }) {
   if (page + 1 < totalPages) { kb.text('➡️ Selanjutnya').primary(); nav = true; }
   if (nav) kb.row();
   // Utility rows
-  kb.text('💰 Top Up').success().text('💸 Tarik Saldo').success().row();
+  kb.text('💰 Top Up').success().row();
   kb.text('👨‍💻 Bantuan').danger().row();
   kb.text('/start').danger().row();
   return kb.resized().persistent();

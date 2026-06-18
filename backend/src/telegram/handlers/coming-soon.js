@@ -8,8 +8,7 @@ function registerComingSoonHandlers(bot) {
     `${title}\n\nFitur ini sedang disiapkan dan akan segera hadir. 🙏\n` +
     'Sementara ini, gunakan 📦 Daftar Produk untuk mulai belanja.'
   );
-
-  bot.hears('💸 Tarik Saldo', soon('💸 <b>Tarik Saldo</b>'));
+  void soon; // no placeholder buttons currently active
 }
 
 module.exports = { registerComingSoonHandlers };
