@@ -72,7 +72,7 @@ async function showProductDetail(ctx, productId, qty = 1) {
   const kb = new InlineKeyboard();
   if (!soldOut) {
     kb.text('➖', `v3:p:${productId}:${Math.max(1, q - 1)}`)
-      .text('📝', 'v3:noop')
+      .text('📝', `v3:qin:${productId}:${q}`)
       .text('➕', `v3:p:${productId}:${Math.min(maxQty, q + 1)}`).row()
       .text('💰 Buy (Saldo)', `v3:saldo:${productId}:${q}`)
       .text('💳 Buy (Qris)', `v3:order:${productId}:${q}`).row();
@@ -102,6 +102,16 @@ function registerProductHandlers(bot, opts = {}) {
     return showProductList(ctx, Math.max(0, page - 1));
   });
 
+  // Capture a typed custom quantity when the 📝 button set the awaiting flag.
+  // Must be registered BEFORE the greedy product-name handler below.
+  bot.hears(/^\s*\d+\s*$/, async (ctx, next) => {
+    const aw = ctx.session && ctx.session.awaitingQty;
+    if (!aw || !aw.productId) return typeof next === 'function' ? next() : undefined;
+    const n = Math.max(1, parseInt(String(ctx.message.text).trim(), 10) || 1);
+    ctx.session.awaitingQty = null;
+    return showProductDetail(ctx, aw.productId, n);
+  });
+
   // Product NAME press → open the mapped product detail for the current page.
   // Matches the button label stored when the list was rendered. Falls through
   // to other handlers if the text isn't a known product button.
@@ -120,6 +130,15 @@ function registerProductHandlers(bot, opts = {}) {
     return showProductList(ctx, Number(ctx.match[1]));
   });
   bot.callbackQuery('v3:tolist', async (ctx) => { await ctx.answerCallbackQuery(); return showProductList(ctx, 0); });
+
+  // Prompt for a custom quantity (📝). Sets a session flag; the next number the
+  // user types is captured by the numeric handler above.
+  bot.callbackQuery(/^v3:qin:([^:]+):(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    if (!ctx.session) ctx.session = {};
+    ctx.session.awaitingQty = { productId: ctx.match[1] };
+    return replyClean(ctx, '✏️ Ketik jumlah yang kamu mau (angka saja), contoh: <code>3</code>');
+  });
 
   // Product detail by id (inline). Optional qty for the stepper: v3:p:<id>:<qty>
   bot.callbackQuery(/^v3:p:([^:]+)(?::(\d+))?$/, async (ctx) => {

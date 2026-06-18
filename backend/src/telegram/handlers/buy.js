@@ -225,9 +225,9 @@ async function buyWithBalance(ctx, productId, qty) {
         [res.order.id, totalPrice]
       );
       await client.query(
-        "UPDATE payments SET status='paid', updated_at=now() WHERE order_id=$1",
+        "UPDATE payments SET status='paid', paid_at=now() WHERE order_id=$1",
         [res.order.id]
-      ).catch(() => {});
+      );
       // Deliver stock units for this order.
       const oi = await client.query("SELECT id, product_id, quantity FROM order_items WHERE order_id=$1", [res.order.id]);
       for (const item of oi.rows) {
