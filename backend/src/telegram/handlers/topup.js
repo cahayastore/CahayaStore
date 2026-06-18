@@ -1,12 +1,11 @@
 'use strict';
-const { InlineKeyboard } = require('grammy');
+const { InlineKeyboard, InputFile } = require('grammy');
 const { ensureTelegramUser, rupiah } = require('./_shared');
 const { replyClean, editOrReply } = require('./_reply');
 const wallet = require('../../wallet.service');
 const { createTopupOrder } = require('../../checkout.service');
 const { query } = require('../../db');
-
-const QR_IMG = (data) => `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=10&data=${encodeURIComponent(data)}`;
+const { buildQrisCard } = require('../../qris-card.service');
 // Preset top-up amounts (rupiah).
 const PRESETS = [10000, 20000, 50000, 100000, 200000, 500000];
 
@@ -70,7 +69,20 @@ async function createAndShowTopupQris(ctx, amount) {
 
   if (res.qrisData) {
     try { await ctx.deleteMessage(); } catch {}
-    const sent = await ctx.replyWithPhoto(QR_IMG(res.qrisData), { caption, parse_mode: 'HTML', reply_markup: kb });
+    let sent;
+    try {
+      const card = await buildQrisCard({
+        qrisData: res.qrisData,
+        title: 'Top Up Saldo',
+        orderNo: res.orderNo,
+        amount: res.amount,
+        subtitle: `Saldo masuk: ${rupiah(res.baseAmount)}`,
+      });
+      sent = await ctx.replyWithPhoto(new InputFile(card, `qris-${res.orderNo}.png`), { caption, parse_mode: 'HTML', reply_markup: kb });
+    } catch (e) {
+      console.error('[topup qris card]', e.message);
+      sent = await ctx.reply(caption + '\n\n⚠️ Gagal membuat gambar QRIS.', { parse_mode: 'HTML', reply_markup: kb });
+    }
     if (ctx.session) ctx.session.lastBotMsgId = sent.message_id;
     return sent;
   }

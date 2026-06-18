@@ -6,14 +6,14 @@
    Identity = ctx.from (the Telegram user), so the order + credential
    delivery always belong to the buyer who pressed the button.
    ════════════════════════════════════════════════════════════════════ */
-const { InlineKeyboard } = require('grammy');
+const { InlineKeyboard, InputFile } = require('grammy');
 const { query } = require('../../db');
 const { escapeHtml, rupiah, ensureTelegramUser } = require('./_shared');
 const { editOrReply, replyClean, replyEphemeral } = require('./_reply');
 const { createOrderForCustomer } = require('../../checkout.service');
+const { buildQrisCard } = require('../../qris-card.service');
 
 const MAX_QTY = 100;
-const QR_IMG = (data) => `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=10&data=${encodeURIComponent(data)}`;
 
 async function fetchProduct(productId) {
   const r = await query(
@@ -100,7 +100,20 @@ async function createAndShowQris(ctx, productId, qty) {
   if (res.qrisData) {
     // Replace the current screen with a photo message (QRIS).
     try { await ctx.deleteMessage(); } catch {}
-    const sent = await ctx.replyWithPhoto(QR_IMG(res.qrisData), { caption, parse_mode: 'HTML', reply_markup: kb });
+    let sent;
+    try {
+      const card = await buildQrisCard({
+        qrisData: res.qrisData,
+        title: 'Pembayaran QRIS',
+        orderNo: res.orderNo,
+        amount: res.amount,
+        subtitle: `${p.name} × ${q}`,
+      });
+      sent = await ctx.replyWithPhoto(new InputFile(card, `qris-${res.orderNo}.png`), { caption, parse_mode: 'HTML', reply_markup: kb });
+    } catch (e) {
+      console.error('[buy qris card]', e.message);
+      sent = await ctx.reply(caption + '\n\n⚠️ Gagal membuat gambar QRIS.', { parse_mode: 'HTML', reply_markup: kb });
+    }
     if (ctx.session) ctx.session.lastBotMsgId = sent.message_id;
     return sent;
   }
