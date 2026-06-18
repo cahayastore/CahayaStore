@@ -46,22 +46,19 @@ function registerStartHandlers(bot) {
       } catch (e) { console.error('[tg start ref]', e.message); }
     }
 
-    // Single-screen UX: show a banner (if configured) with the persistent colored
-    // menu keyboard, then the numbered product list. Banner is set in admin panel.
+    // Single-screen UX: if a banner is configured, show it (with the colored menu
+    // keyboard). Otherwise skip straight to the product list (which already carries
+    // the keyboard) — no redundant greeting message.
     let banner = null;
     try { banner = await getSetting(KEYS.BOT_BANNER); } catch (e) {}
-    const greeting = (banner && banner.caption) ? banner.caption : '🛍️ <b>Cahaya Store</b>';
-    try {
-      if (banner && banner.image_url) {
+    if (banner && banner.image_url) {
+      try {
         await ctx.replyWithPhoto(banner.image_url, {
-          caption: greeting, parse_mode: 'HTML', reply_markup: menuReplyKeyboard(),
+          caption: (banner.caption || '').trim() || undefined,
+          parse_mode: 'HTML',
+          reply_markup: menuReplyKeyboard(),
         });
-      } else {
-        await ctx.reply(greeting, { parse_mode: 'HTML', reply_markup: menuReplyKeyboard() });
-      }
-    } catch (e) {
-      console.error('[tg start banner]', e.message);
-      try { await ctx.reply('🛍️ <b>Cahaya Store</b>', { parse_mode: 'HTML', reply_markup: menuReplyKeyboard() }); } catch (e2) {}
+      } catch (e) { console.error('[tg start banner]', e.message); }
     }
     try {
       await showProductList(ctx, 0);
