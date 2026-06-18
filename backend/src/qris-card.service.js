@@ -58,7 +58,7 @@ function cornerBrackets(x, y, size, t, len, col) {
    caption text, so the image focuses on the QR + order label. */
 async function buildQrisCard({ qrisData, orderNo = '', amount = 0, subtitle = '' }) {
   const W = 540;
-  const qrPx = 320;          // actual QR drawing area
+  const qrPx = 340;          // actual QR drawing area
   const logoW = 260;
 
   const logo = await getLogo(logoW);
@@ -75,35 +75,43 @@ async function buildQrisCard({ qrisData, orderNo = '', amount = 0, subtitle = ''
   const frameX = qrX - frameGap;
   const frameY = qrY - frameGap;
   const frameSize = qrPx + frameGap * 2;
+  const H = frameY + frameSize + 34;
 
-  // Order label box (rounded, blue outline) below the scan frame.
-  const labelText = orderNo ? `#${orderNo}` : 'Scan untuk bayar';
-  const boxY = frameY + frameSize + 26;
-  const boxH = 64;
-  const boxW = Math.min(W - 80, Math.max(220, labelText.length * 24 + 80));
-  const boxX = Math.round((W - boxW) / 2);
-  const H = boxY + boxH + 34;
-
-  // Standard QR as PNG (black on white), composited (most reliable to scan).
+  // Standard QR as PNG (black on white). High EC so the center order-id overlay
+  // doesn't break scanning.
   const qrBuf = await QRCode.toBuffer(String(qrisData), {
-    errorCorrectionLevel: 'M',
+    errorCorrectionLevel: 'H',
     margin: 2,
     width: qrPx,
     color: { dark: QR_DARK + 'ff', light: '#ffffffff' },
   });
 
+  // Center order-id plate geometry.
+  const cx = qrX + qrPx / 2;
+  const cy = qrY + qrPx / 2;
+  const idText = orderNo ? String(orderNo) : '';
+  const plateW = Math.max(96, idText.length * 13 + 30);
+  const plateH = 40;
+
   const svg = `
 <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
   <rect width="${W}" height="${H}" fill="#f1f3f5"/>
   ${cornerBrackets(frameX, frameY, frameSize, bracketT, bracketLen, ACCENT)}
-
-  <!-- Order label box (Scan-Me style) -->
-  <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="18" fill="none" stroke="${ACCENT}" stroke-width="6"/>
-  <text x="${W / 2}" y="${boxY + boxH / 2 + 11}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="bold" letter-spacing="1" fill="${QR_DARK}">${esc(labelText)}</text>
 </svg>`;
 
   const composites = [{ input: qrBuf, top: qrY, left: qrX }];
   if (logo) composites.unshift({ input: logo.buf, top: logoTop, left: Math.round((W - logo.width) / 2) });
+
+  // Order id plate, composited ON TOP of the QR center.
+  if (idText) {
+    const plate = await sharp(Buffer.from(
+      `<svg width="${Math.ceil(plateW)}" height="${plateH}" xmlns="http://www.w3.org/2000/svg">` +
+      `<rect width="${Math.ceil(plateW)}" height="${plateH}" rx="12" fill="#ffffff" stroke="${ACCENT}" stroke-width="3"/>` +
+      `<text x="${(plateW / 2).toFixed(1)}" y="${(plateH / 2 + 6).toFixed(1)}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="bold" letter-spacing="0.5" fill="${QR_DARK}">${esc(idText)}</text>` +
+      `</svg>`
+    )).png().toBuffer();
+    composites.push({ input: plate, top: Math.round(cy - plateH / 2), left: Math.round(cx - plateW / 2) });
+  }
 
   return sharp(Buffer.from(svg)).composite(composites).png().toBuffer();
 }

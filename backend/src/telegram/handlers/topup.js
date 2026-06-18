@@ -6,6 +6,7 @@ const wallet = require('../../wallet.service');
 const { createTopupOrder } = require('../../checkout.service');
 const { query } = require('../../db');
 const { buildQrisCard } = require('../../qris-card.service');
+const { showProductList } = require('./v3-menu');
 // Preset top-up amounts (rupiah).
 const PRESETS = [10000, 20000, 50000, 100000, 200000, 500000];
 
@@ -67,6 +68,7 @@ async function createAndShowTopupQris(ctx, amount) {
     `✨ Saldo otomatis bertambah setelah lunas.`;
   const kb = new InlineKeyboard()
     .text('🔄 Cek Status', `tu:check:${res.orderNo}`).row()
+    .text('❌ Batalkan', `tu:cancel:${res.orderNo}`).row()
     .text('💰 Saldo Saya', 'menu:saldo');
 
   if (res.qrisData) {
@@ -101,7 +103,9 @@ async function checkTopupStatus(ctx, orderNo) {
   if (String(o.payment_status).toLowerCase() === 'paid') {
     try { await ctx.answerCallbackQuery({ text: '✅ Pembayaran diterima!' }); } catch {}
     const balance = await wallet.getBalance(o.user_id);
-    const kb = new InlineKeyboard().text('💰 Saldo Saya', 'menu:saldo').text('📦 Belanja', 'menu:products');
+    const kb = new InlineKeyboard()
+      .text('🛍️ Lanjut Belanja', 'menu:products').row()
+      .text('💰 Saldo Saya', 'menu:saldo');
     try { await ctx.deleteMessage(); } catch {}
     return replyClean(ctx,
       `✅ <b>Top up berhasil!</b>\nSaldo kamu sekarang: <b>${rupiah(balance)}</b>`, { reply_markup: kb });
@@ -126,6 +130,22 @@ function registerTopupHandlers(bot, opts = {}) {
     await ctx.answerCallbackQuery({ text: 'Membuat QRIS…' });
     if (ctx.session) ctx.session.awaitingTopupAmount = false;
     return createAndShowTopupQris(ctx, Number(ctx.match[1]));
+  });
+
+  bot.callbackQuery(/^tu:cancel:(.+)$/, async (ctx) => {
+    const orderNo = ctx.match[1];
+    const r = await query("SELECT id, payment_status FROM orders WHERE order_no = $1 AND order_kind = 'topup'", [orderNo]);
+    if (!r.rows.length) { try { await ctx.answerCallbackQuery({ text: 'Order tidak ditemukan.' }); } catch {} return; }
+    if (String(r.rows[0].payment_status).toLowerCase() === 'paid') {
+      try { await ctx.answerCallbackQuery({ text: 'Top up ini sudah dibayar.', show_alert: true }); } catch {}
+      return;
+    }
+    try {
+      await query("UPDATE orders SET status='cancelled', payment_status='expired', updated_at=now() WHERE id=$1 AND payment_status NOT IN ('paid')", [r.rows[0].id]);
+    } catch (e) { console.error('[topup cancel]', e.message); }
+    try { await ctx.answerCallbackQuery({ text: '❌ Top up dibatalkan.' }); } catch {}
+    try { await ctx.deleteMessage(); } catch {}
+    return showProductList(ctx, 0);
   });
 
   // Custom amount: prompt the user to type a number.

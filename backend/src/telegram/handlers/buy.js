@@ -12,6 +12,7 @@ const { escapeHtml, rupiah, ensureTelegramUser } = require('./_shared');
 const { editOrReply, replyClean, replyEphemeral } = require('./_reply');
 const { createOrderForCustomer } = require('../../checkout.service');
 const { buildQrisCard } = require('../../qris-card.service');
+const { showProductList } = require('./v3-menu');
 
 const MAX_QTY = 100;
 
@@ -99,6 +100,7 @@ async function createAndShowQris(ctx, productId, qty) {
     `✨ Pembayaran akan otomatis terdeteksi.`;
   const kb = new InlineKeyboard()
     .text('🔄 Cek Status Pembayaran', `v3:check:${res.orderNo}`).row()
+    .text('❌ Batalkan Pesanan', `v3:cancel:${res.orderNo}`).row()
     .text('☰ Pesanan Saya', 'v3:orders');
 
   if (res.qrisData) {
@@ -126,6 +128,35 @@ async function createAndShowQris(ctx, productId, qty) {
     caption + '\n\n⚠️ QRIS belum dikonfigurasi. Hubungi admin.', { reply_markup: kb });
 }
 
+/* Cancel a pending order: mark expired/cancelled, release reserved stock, then
+   open the main product menu. No-op if already paid. */
+async function cancelOrder(ctx, orderNo) {
+  const r = await query(
+    "SELECT id, payment_status FROM orders WHERE order_no = $1",
+    [orderNo]
+  );
+  if (!r.rows.length) { try { await ctx.answerCallbackQuery({ text: 'Order tidak ditemukan.' }); } catch {} return; }
+  const o = r.rows[0];
+  if (String(o.payment_status).toLowerCase() === 'paid') {
+    try { await ctx.answerCallbackQuery({ text: 'Pesanan ini sudah dibayar.', show_alert: true }); } catch {}
+    return;
+  }
+  try {
+    await query(
+      "UPDATE orders SET status='cancelled', payment_status='expired', updated_at=now() WHERE id=$1 AND payment_status NOT IN ('paid')",
+      [o.id]
+    );
+    // Release any stock reserved for this order back to available.
+    await query(
+      "UPDATE product_stocks SET status='available', reserved_until=NULL, reserved_order_id=NULL WHERE reserved_order_id=$1 AND status IN ('available','reserved')",
+      [o.id]
+    );
+  } catch (e) { console.error('[buy cancel]', e.message); }
+  try { await ctx.answerCallbackQuery({ text: '❌ Pesanan dibatalkan.' }); } catch {}
+  try { await ctx.deleteMessage(); } catch {}
+  return showProductList(ctx, 0);
+}
+
 /* Step 3: check payment status. */
 async function checkStatus(ctx, orderNo) {
   const r = await query(
@@ -146,7 +177,9 @@ async function checkStatus(ctx, orderNo) {
       `✅ <b>Pembayaran berhasil!</b>\n` +
       `Order: <code>${escapeHtml(orderNo)}</code>\n\n` +
       `Produk sedang dikirim ke chat ini. Cek pesan berikutnya. 🙏`;
-    const kb = new InlineKeyboard().text('☰ Pesanan Saya', 'v3:orders').text('🛍️ Menu', 'menu:products');
+    const kb = new InlineKeyboard()
+      .text('🛍️ Lanjut Belanja', 'menu:products').row()
+      .text('☰ Pesanan Saya', 'v3:orders');
     try { await ctx.deleteMessage(); } catch {}
     return replyClean(ctx, text, { reply_markup: kb });
   }
@@ -176,6 +209,9 @@ function registerBuyHandlers(bot) {
   });
   bot.callbackQuery(/^v3:check:(.+)$/, async (ctx) => {
     return checkStatus(ctx, ctx.match[1]);
+  });
+  bot.callbackQuery(/^v3:cancel:(.+)$/, async (ctx) => {
+    return cancelOrder(ctx, ctx.match[1]);
   });
 }
 
