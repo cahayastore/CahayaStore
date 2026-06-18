@@ -71,10 +71,13 @@ function buildListReplyKeyboard({ products, page, totalPages }) {
   const kb = new Keyboard();
   // Top menu row
   kb.text('📦 Daftar Produk').primary().text('🎟️ Voucher').primary().text('📋 Pesanan Saya').primary().row();
-  // Product name buttons (1 per row for readability).
-  for (const p of products) {
-    kb.text(compactName(p.name, 30)).primary().row();
-  }
+  // Product name buttons (3 per row).
+  const PRODUCT_COLUMNS = 3;
+  products.forEach((p, i) => {
+    kb.text(compactName(p.name, 20)).primary();
+    if ((i + 1) % PRODUCT_COLUMNS === 0) kb.row();
+  });
+  if (products.length % PRODUCT_COLUMNS !== 0) kb.row();
   // Pagination
   let nav = false;
   if (page > 0) { kb.text('← Kembali').primary(); nav = true; }
@@ -96,7 +99,7 @@ async function showProductList(ctx, page = 0, _edit = false) {
   // matching the button label (compactName) the user pressed.
   if (!ctx.session) ctx.session = {};
   ctx.session.listProductIds = products.map((p) => String(p.id));
-  ctx.session.listProductButtons = products.map((p) => ({ label: compactName(p.name, 30), id: String(p.id) }));
+  ctx.session.listProductButtons = products.map((p) => ({ label: compactName(p.name, 20), id: String(p.id) }));
   ctx.session.listPage = page;
   ctx.session.listTotalPages = totalPages;
 
