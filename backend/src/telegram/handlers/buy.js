@@ -7,12 +7,13 @@
    delivery always belong to the buyer who pressed the button.
    ════════════════════════════════════════════════════════════════════ */
 const { InlineKeyboard, InputFile } = require('grammy');
-const { query } = require('../../db');
+const { query, tx } = require('../../db');
 const { escapeHtml, rupiah, ensureTelegramUser } = require('./_shared');
 const { editOrReply, replyClean, replyEphemeral } = require('./_reply');
 const { createOrderForCustomer } = require('../../checkout.service');
 const { buildQrisCard } = require('../../qris-card.service');
 const { showProductList } = require('./v3-menu');
+const wallet = require('../../wallet.service');
 
 const MAX_QTY = 100;
 
@@ -164,6 +165,126 @@ function scheduleQrExpiry(ctx, orderNo, messageId, expiresAt) {
   }, delay).unref?.();
 }
 
+/* Pay an order instantly from wallet balance: create order → debit wallet →
+   mark paid → deliver stock → send credentials. */
+async function buyWithBalance(ctx, productId, qty) {
+  const p = await fetchProduct(productId);
+  if (!p) return editOrReply(ctx, 'Produk tidak ditemukan.');
+  const stock = Number(p.stock);
+  if (stock <= 0) return editOrReply(ctx, '❌ Stok habis.');
+  const q = Math.max(1, Math.min(Math.min(MAX_QTY, stock), Number(qty) || 1));
+
+  let user = null;
+  try { user = await ensureTelegramUser(ctx.from); } catch (e) { console.error('[v3 saldo ensureUser]', e.message); }
+  if (!user || !user.id) return editOrReply(ctx, 'Gagal memproses akun. Coba /start dulu.');
+
+  const totalPrice = Number(p.price) * q;
+  const balance = await wallet.getBalance(user.id);
+  if (balance < totalPrice) {
+    const kb = new InlineKeyboard()
+      .text('💰 Top Up Saldo', 'menu:saldo').row()
+      .text('💳 Bayar dengan QRIS', `v3:order:${productId}:${q}`).row()
+      .text('← Kembali', `v3:p:${productId}:${q}`);
+    return editOrReply(ctx,
+      `⚠️ <b>Saldo tidak cukup</b>\n\n` +
+      `Saldo kamu: <b>${rupiah(balance)}</b>\n` +
+      `Total harga: <b>${rupiah(totalPrice)}</b>\n\n` +
+      `Top up dulu atau bayar dengan QRIS.`, { reply_markup: kb });
+  }
+
+  const handle = ctx.from && ctx.from.username
+    ? String(ctx.from.username).toLowerCase().replace(/[^a-z0-9_]/g, '') : '';
+  const email = user.email || (handle ? `${handle}@telegram.cahayastore.me` : `tg${ctx.from.id}@telegram.cahayastore.me`);
+
+  // 1) Create the order (reserves stock + a pending payment row).
+  let res;
+  try {
+    res = await createOrderForCustomer({
+      customer: { id: user.id, email },
+      items: [{ productId: p.id, quantity: q }],
+      channel: 'telegram',
+    });
+  } catch (e) {
+    console.error('[v3 saldo createOrder]', e.message);
+    return editOrReply(ctx, `Gagal membuat pesanan: ${escapeHtml(e.message)}`);
+  }
+
+  // 2) Debit wallet (by the product total, not the unique QRIS amount), mark
+  //    paid, and deliver — all atomically.
+  try {
+    await tx(async (client) => {
+      const ord = await client.query("SELECT id, payment_status FROM orders WHERE id = $1 FOR UPDATE", [res.order.id]);
+      if (!ord.rows.length) throw new Error('Order hilang.');
+      if (String(ord.rows[0].payment_status).toLowerCase() === 'paid') return;
+      await wallet.adjust(client, {
+        userId: user.id, type: 'purchase', amount: -totalPrice,
+        refOrderId: res.order.id, note: `Beli ${p.name} x${q}`,
+      });
+      await client.query(
+        "UPDATE orders SET payment_status='paid', status='paid', paid_at=now(), total_amount=$2, updated_at=now() WHERE id=$1",
+        [res.order.id, totalPrice]
+      );
+      await client.query(
+        "UPDATE payments SET status='paid', updated_at=now() WHERE order_id=$1",
+        [res.order.id]
+      ).catch(() => {});
+      // Deliver stock units for this order.
+      const oi = await client.query("SELECT id, product_id, quantity FROM order_items WHERE order_id=$1", [res.order.id]);
+      for (const item of oi.rows) {
+        const units = Math.max(1, Number(item.quantity) || 1);
+        for (let n = 0; n < units; n += 1) {
+          let s = await client.query(
+            `SELECT id FROM product_stocks WHERE product_id=$1 AND reserved_order_id=$2 AND status IN ('available','reserved')
+              ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`,
+            [item.product_id, res.order.id]
+          );
+          if (!s.rows.length) {
+            s = await client.query(
+              `SELECT id FROM product_stocks WHERE product_id=$1 AND status='available'
+                 AND (reserved_until IS NULL OR reserved_until < now() OR reserved_order_id=$2)
+                ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`,
+              [item.product_id, res.order.id]
+            );
+          }
+          if (s.rows.length) {
+            await client.query(
+              "UPDATE product_stocks SET status='sold', sold_at=now(), reserved_until=NULL, reserved_order_id=NULL, sold_order_id=$2 WHERE id=$1",
+              [s.rows[0].id, res.order.id]
+            );
+            await client.query("UPDATE order_items SET delivered_stock_id=$2 WHERE id=$1", [item.id, s.rows[0].id]);
+          }
+        }
+      }
+      await client.query("INSERT INTO deliveries (order_id, delivery_type, status) VALUES ($1,'manual','delivered')", [res.order.id]);
+    });
+  } catch (e) {
+    console.error('[v3 saldo pay]', e.message);
+    const msg = e.message === 'INSUFFICIENT_BALANCE' ? 'Saldo tidak cukup.' : 'Gagal memproses pembayaran saldo.';
+    return editOrReply(ctx, `⚠️ ${msg}`);
+  }
+
+  // 3) Deliver credentials to the buyer via the shared web-checkout helper.
+  try {
+    const web = require('../../routes/web-checkout.routes');
+    if (typeof web.deliverCredentialsToTelegram === 'function') {
+      await web.deliverCredentialsToTelegram(res.order.id);
+    }
+  } catch (e) { console.error('[v3 saldo deliver msg]', e.message); }
+
+  const newBalance = await wallet.getBalance(user.id);
+  const kb = new InlineKeyboard()
+    .text('🛍️ Lanjut Belanja', 'menu:products').row()
+    .text('☰ Pesanan Saya', 'v3:orders');
+  try { await ctx.deleteMessage(); } catch {}
+  return replyClean(ctx,
+    `✅ <b>Pembelian berhasil!</b>\n` +
+    `Order: <code>${escapeHtml(res.orderNo)}</code>\n` +
+    `${escapeHtml(p.name)} × ${q} — <b>${rupiah(totalPrice)}</b>\n` +
+    `Dibayar dari saldo. Sisa saldo: <b>${rupiah(newBalance)}</b>\n\n` +
+    `Produk dikirim ke chat ini. 🙏`,
+    { reply_markup: kb });
+}
+
 
 /* Cancel a pending order: mark expired/cancelled, release reserved stock, then
    open the main product menu. No-op if already paid. */
@@ -251,6 +372,10 @@ function registerBuyHandlers(bot) {
   bot.callbackQuery(/^v3:order:([^:]+):(\d+)$/, async (ctx) => {
     await ctx.answerCallbackQuery({ text: 'Membuat pesanan…' });
     return createAndShowQris(ctx, ctx.match[1], Number(ctx.match[2]));
+  });
+  bot.callbackQuery(/^v3:saldo:([^:]+):(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery({ text: 'Memproses saldo…' });
+    return buyWithBalance(ctx, ctx.match[1], Number(ctx.match[2]));
   });
   bot.callbackQuery(/^v3:check:(.+)$/, async (ctx) => {
     return checkStatus(ctx, ctx.match[1]);
