@@ -22,7 +22,7 @@ async function showProductDetail(ctx, productId, { PRODUCT_DOMAIN, MINIAPP_VERSI
   const text =
     `🛍️ <b>${escapeHtml(p.name)}</b>\n` +
     `Harga: <b>${rupiah(p.price)}</b>\n` +
-    `Stok: ${inStock ? '✅ tersedia' : '❌ habis'}\n\n` +
+    `Status: ${inStock ? '✅ tersedia' : '❌ habis'}\n\n` +
     `${escapeHtml(p.description || '').slice(0, 600)}`;
   // Buy / back stay as inline buttons under the detail message.
   const kb = new InlineKeyboard()
@@ -49,12 +49,16 @@ function registerProductHandlers(bot, opts = {}) {
     return showProductList(ctx, Math.max(0, page - 1));
   });
 
-  // Number press (1..15) → open the mapped product detail for the current page.
-  bot.hears(/^([1-9]|1[0-5])$/, async (ctx, next) => {
-    const ids = (ctx.session && ctx.session.listProductIds) || [];
-    const idx = Number(ctx.match[1]) - 1;
-    if (!ids.length || idx < 0 || idx >= ids.length) return typeof next === 'function' ? next() : undefined;
-    return showProductDetail(ctx, ids[idx], opts);
+  // Product NAME press → open the mapped product detail for the current page.
+  // Matches the button label stored when the list was rendered. Falls through
+  // to other handlers if the text isn't a known product button.
+  bot.hears(/^.+$/, async (ctx, next) => {
+    const buttons = (ctx.session && ctx.session.listProductButtons) || [];
+    if (!buttons.length) return typeof next === 'function' ? next() : undefined;
+    const pressed = String(ctx.message && ctx.message.text || '').trim();
+    const match = buttons.find((b) => b.label === pressed);
+    if (!match) return typeof next === 'function' ? next() : undefined;
+    return showProductDetail(ctx, match.id, opts);
   });
 
   // Inline pagination (legacy) + back-to-list.

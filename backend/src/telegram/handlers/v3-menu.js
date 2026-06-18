@@ -40,18 +40,17 @@ async function fetchProductsPage(page) {
 }
 
 function buildListText({ products, page, totalPages }) {
-  // V2 Marketku clean style: "LIST PRODUCT" + "[n]. Name ( stock )".
-  const rows = products.map((p, idx) => {
-    const stock = Number(p.stock);
-    const stockLabel = (stock > 9999 || stock < 0) ? '∞' : String(stock);
-    return `[${idx + 1}]. ${escapeHtml(compactName(p.name, 38))} ( ${stockLabel} )`;
-  });
+  // Clean style: "LIST PRODUCT" + "• Name" (stock hidden from users).
+  const rows = products.map((p) => `• ${escapeHtml(compactName(p.name, 40))}`);
   const d = new Date(Date.now() + 7 * 60 * 60 * 1000);
   const pad = (n) => String(n).padStart(2, '0');
   const time = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
   const lines = ['LIST PRODUCT', ''];
-  if (products.length) lines.push(...rows);
-  else lines.push('Produk sedang kosong.');
+  if (products.length) {
+    lines.push(...rows, '', 'Tekan nama produk di bawah untuk melihat detail.');
+  } else {
+    lines.push('Produk sedang kosong.');
+  }
   lines.push('', `📄 Halaman ${page + 1} / ${totalPages}`, `📆 ${time} WIB`);
   return lines.join('\n');
 }
@@ -66,18 +65,16 @@ function menuReplyKeyboard() {
     .resized().persistent();
 }
 
-/* The product-list keyboard: top menu + numbered product buttons + pagination
-   + utility rows. Mirrors Marketku V2 getProductPageKeyboard. */
-function buildListReplyKeyboard({ itemCount, page, totalPages }) {
+/* The product-list keyboard: top menu + product NAME buttons + pagination
+   + utility rows. Pressing a name opens that product's detail. */
+function buildListReplyKeyboard({ products, page, totalPages }) {
   const kb = new Keyboard();
   // Top menu row
   kb.text('📦 Daftar Produk').primary().text('🎟️ Voucher').primary().text('📋 Pesanan Saya').primary().row();
-  // Number buttons (5 per row)
-  for (let i = 1; i <= itemCount; i += 1) {
-    kb.text(String(i)).primary();
-    if (i % NUM_COLUMNS === 0) kb.row();
+  // Product name buttons (1 per row for readability).
+  for (const p of products) {
+    kb.text(compactName(p.name, 30)).primary().row();
   }
-  if (itemCount % NUM_COLUMNS !== 0) kb.row();
   // Pagination
   let nav = false;
   if (page > 0) { kb.text('← Kembali').primary(); nav = true; }
@@ -95,13 +92,15 @@ async function showProductList(ctx, page = 0, _edit = false) {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const text = buildListText({ userName: ctx.from?.first_name, products, page, totalPages });
 
-  // Remember which products map to which numbers on this page (for number presses).
+  // Remember which products map to this page. Name buttons map back to ids by
+  // matching the button label (compactName) the user pressed.
   if (!ctx.session) ctx.session = {};
   ctx.session.listProductIds = products.map((p) => String(p.id));
+  ctx.session.listProductButtons = products.map((p) => ({ label: compactName(p.name, 30), id: String(p.id) }));
   ctx.session.listPage = page;
   ctx.session.listTotalPages = totalPages;
 
-  const reply_markup = buildListReplyKeyboard({ itemCount: products.length, page, totalPages });
+  const reply_markup = buildListReplyKeyboard({ products, page, totalPages });
   return replyClean(ctx, text, { reply_markup });
 }
 
