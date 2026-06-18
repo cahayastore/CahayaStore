@@ -56,13 +56,15 @@ async function createAndShowTopupQris(ctx, amount) {
     return editOrReply(ctx, `Gagal membuat top up: ${e.message}`);
   }
 
+  const uniqueCode = Math.max(0, Number(res.amount) - Number(res.baseAmount));
+  const mins = res.expiresAt ? Math.max(1, Math.round((new Date(res.expiresAt).getTime() - Date.now()) / 60000)) : 5;
   const caption =
-    `💰 <b>Top Up Saldo</b>\n` +
-    `Order: <code>${res.orderNo}</code>\n` +
-    `Nominal masuk saldo: <b>${rupiah(res.baseAmount)}</b>\n\n` +
-    `💳 Bayar <b>TEPAT</b>: <code>${rupiah(res.amount)}</code>\n` +
-    `<i>Nominal unik agar pembayaran terdeteksi otomatis. Bayar pas sampai digit terakhir.</i>\n\n` +
-    `Scan QRIS di atas. Saldo otomatis bertambah setelah lunas.`;
+    `💳 <b>Pembayaran QRIS ${res.orderNo}</b>\n\n` +
+    `💰 Top Up Saldo: ${rupiah(res.baseAmount)}\n` +
+    `🔢 Kode Unik: ${rupiah(uniqueCode)}\n` +
+    `💳 Total Pembayaran: <b>${rupiah(res.amount)}</b>\n\n` +
+    `⏱️ Berlaku selama ${mins} menit\n` +
+    `✨ Saldo otomatis bertambah setelah lunas.`;
   const kb = new InlineKeyboard()
     .text('🔄 Cek Status', `tu:check:${res.orderNo}`).row()
     .text('💰 Saldo Saya', 'menu:saldo');

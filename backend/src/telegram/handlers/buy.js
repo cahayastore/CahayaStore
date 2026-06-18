@@ -86,13 +86,17 @@ async function createAndShowQris(ctx, productId, qty) {
     return editOrReply(ctx, `Gagal membuat pesanan: ${escapeHtml(e.message)}`);
   }
 
+  const baseTotal = Number(p.price) * q;
+  const uniqueCode = Math.max(0, Number(res.amount) - baseTotal);
+  const mins = Math.max(1, Math.round((new Date(res.expiresAt).getTime() - Date.now()) / 60000));
   const caption =
-    `🧾 <b>Pesanan dibuat</b>\n` +
-    `Order: <code>${escapeHtml(res.orderNo)}</code>\n` +
-    `${escapeHtml(p.name)} × ${q}\n` +
-    `💳 Bayar <b>TEPAT</b>: <code>${rupiah(res.amount)}</code>\n` +
-    `<i>Nominal ini unik untuk pesananmu — bayar pas sampai digit terakhir agar otomatis terdeteksi.</i>\n\n` +
-    `Scan QRIS di atas untuk membayar. Setelah lunas, produk dikirim otomatis ke chat ini.`;
+    `💳 <b>Pembayaran QRIS ${escapeHtml(res.orderNo)}</b>\n\n` +
+    `📦 Produk: ${escapeHtml(p.name)} x${q}\n` +
+    `💰 Total: ${rupiah(baseTotal)}\n` +
+    `🔢 Kode Unik: ${rupiah(uniqueCode)}\n` +
+    `💳 Total Pembayaran: <b>${rupiah(res.amount)}</b>\n\n` +
+    `⏱️ Berlaku selama ${mins} menit\n` +
+    `✨ Pembayaran akan otomatis terdeteksi.`;
   const kb = new InlineKeyboard()
     .text('🔄 Cek Status Pembayaran', `v3:check:${res.orderNo}`).row()
     .text('☰ Pesanan Saya', 'v3:orders');
