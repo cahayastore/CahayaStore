@@ -15,6 +15,17 @@ router.get('/vouchers', async (_req, res) => {
   }
 });
 
+/* Redemption history report. */
+router.get('/vouchers/redemptions', async (_req, res) => {
+  try {
+    const data = await voucher.listRedemptions(200);
+    res.json({ success: true, data });
+  } catch (e) {
+    console.error('[vouchers redemptions]', e);
+    res.status(500).json({ success: false, message: 'Gagal memuat riwayat voucher.' });
+  }
+});
+
 router.post('/vouchers', async (req, res) => {
   try {
     const { code, amount, maxUses, perUserLimit, expiresAt, note } = req.body || {};

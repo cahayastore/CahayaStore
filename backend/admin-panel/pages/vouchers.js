@@ -70,6 +70,44 @@ function buildCreateForm(onCreated) {
   return form;
 }
 
+/* Redemption history report (who redeemed which voucher, when). */
+async function buildRedemptionsReport() {
+  const section = el('div', { style: 'margin-top:26px' },
+    el('h3', { style: 'margin:0 0 10px' }, 'Riwayat Pemakaian Voucher')
+  );
+  try {
+    const { data } = await api('/api/admin/vouchers/redemptions');
+    const total = data.reduce((s, r) => s + Number(r.amount || 0), 0);
+    section.appendChild(el('p', { class: 'muted', style: 'margin:0 0 10px' },
+      `${data.length} penukaran · total ${formatIDR(total)}`));
+    const t = el('table', { class: 'table' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, 'Waktu'), el('th', {}, 'Kode'), el('th', {}, 'User'), el('th', {}, 'Nominal')
+      ))
+    );
+    const tb = el('tbody');
+    if (!data.length) {
+      tb.appendChild(el('tr', {}, el('td', { colspan: '4', class: 'muted', style: 'text-align:center;padding:24px' }, 'Belum ada penukaran.')));
+    } else {
+      for (const r of data) {
+        const who = r.telegram_username ? '@' + r.telegram_username
+          : (r.user_name || (r.telegram_id ? 'ID ' + r.telegram_id : '—'));
+        tb.appendChild(el('tr', {},
+          el('td', {}, formatDate(r.created_at)),
+          el('td', {}, el('code', {}, r.code)),
+          el('td', {}, who),
+          el('td', {}, formatIDR(r.amount))
+        ));
+      }
+    }
+    t.appendChild(tb);
+    section.appendChild(t);
+  } catch (e) {
+    section.appendChild(alertBox('err', e.message));
+  }
+  return section;
+}
+
 export async function pageVouchers() {
   const wrap = el('div', {},
     el('div', { class: 'page-head' }, el('h1', {}, 'Voucher')),
@@ -94,6 +132,8 @@ export async function pageVouchers() {
       for (const v of data) tb.appendChild(voucherRow(v, load));
       t.appendChild(tb);
       container.appendChild(t);
+
+      container.appendChild(await buildRedemptionsReport());
     } catch (e) {
       const container = $('#vc', wrap);
       container.innerHTML = '';

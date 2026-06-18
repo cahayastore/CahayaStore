@@ -69,6 +69,22 @@ async function listVouchers(limit = 100) {
   return r.rows;
 }
 
+/* Admin: redemption history (who redeemed what, when). Joins voucher code +
+   the redeeming user's display info. */
+async function listRedemptions(limit = 200) {
+  const r = await query(
+    `SELECT vr.id, vr.amount, vr.created_at,
+            v.code,
+            u.name AS user_name, u.telegram_username, u.telegram_id
+       FROM voucher_redemptions vr
+       JOIN vouchers v ON v.id = vr.voucher_id
+       LEFT JOIN users u ON u.id = vr.user_id
+      ORDER BY vr.created_at DESC LIMIT $1`,
+    [limit]
+  );
+  return r.rows;
+}
+
 /* Admin: create a voucher. */
 async function createVoucher({ code, amount, maxUses = 1, perUserLimit = 1, expiresAt = null, note = null }) {
   const norm = normalizeCode(code);
@@ -95,5 +111,6 @@ async function deleteVoucher(id) {
 }
 
 module.exports = {
-  normalizeCode, redeemVoucher, listVouchers, createVoucher, setVoucherActive, deleteVoucher,
+  normalizeCode, redeemVoucher, listVouchers, listRedemptions,
+  createVoucher, setVoucherActive, deleteVoucher,
 };
