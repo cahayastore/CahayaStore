@@ -34,8 +34,10 @@ async function getExpireMinutes() {
   return minutes;
 }
 
-function genOrderNo() {
-  return `CS-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+async function genOrderNo() {
+  // Short, sequential order numbers backed by a Postgres sequence: CS-10001, CS-10002, ...
+  const r = await query("SELECT nextval('order_no_seq') AS n");
+  return `CS-${r.rows[0].n}`;
 }
 function genToken() {
   return crypto.randomBytes(24).toString('hex');
@@ -230,7 +232,7 @@ router.post('/public/web-checkout', async (req, res) => {
     return { product_id: p.id, partner_id: p.partner_id, name: p.name, quantity: qty, unit_price: Number(p.price), subtotal };
   });
 
-  const orderNo = genOrderNo();
+  const orderNo = await genOrderNo();
   const accessToken = genToken();
 
   // Unique amount so PayHook can disambiguate concurrent orders by exact rupiah.
