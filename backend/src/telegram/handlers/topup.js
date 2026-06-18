@@ -30,6 +30,7 @@ async function renderSaldo(ctx) {
     if ((i + 1) % 2 === 0) kb.row();
   });
   if (PRESETS.length % 2 !== 0) kb.row();
+  kb.text('✏️ Nominal Lain', 'tu:custom').row();
 
   await replyClean(ctx,
     `💰 <b>Saldo kamu: ${rupiah(balance)}</b>\n\n` +
@@ -109,8 +110,33 @@ function registerTopupHandlers(bot, opts = {}) {
 
   bot.callbackQuery(/^tu:amt:(\d+)$/, async (ctx) => {
     await ctx.answerCallbackQuery({ text: 'Membuat QRIS…' });
+    if (ctx.session) ctx.session.awaitingTopupAmount = false;
     return createAndShowTopupQris(ctx, Number(ctx.match[1]));
   });
+
+  // Custom amount: prompt the user to type a number.
+  bot.callbackQuery('tu:custom', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    if (!ctx.session) ctx.session = {};
+    ctx.session.awaitingTopupAmount = true;
+    return editOrReply(ctx,
+      '✏️ <b>Top Up Nominal Lain</b>\n\n' +
+      'Ketik nominal yang ingin kamu top up (minimal Rp1.000).\n' +
+      'Contoh: <code>35000</code>');
+  });
+
+  // Capture a typed number when awaiting a custom top-up amount.
+  bot.hears(/^\s*(?:rp\s*)?[\d.,]+\s*$/i, async (ctx, next) => {
+    if (!ctx.session || !ctx.session.awaitingTopupAmount) return typeof next === 'function' ? next() : undefined;
+    const digits = String(ctx.message.text || '').replace(/[^\d]/g, '');
+    const amount = Number(digits);
+    if (!Number.isFinite(amount) || amount < 1000) {
+      return replyClean(ctx, '⚠️ Nominal tidak valid. Minimal Rp1.000. Ketik lagi, contoh: <code>35000</code>');
+    }
+    ctx.session.awaitingTopupAmount = false;
+    return createAndShowTopupQris(ctx, amount);
+  });
+
   bot.callbackQuery(/^tu:check:(.+)$/, async (ctx) => {
     return checkTopupStatus(ctx, ctx.match[1]);
   });
