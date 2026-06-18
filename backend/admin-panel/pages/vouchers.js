@@ -70,38 +70,101 @@ function buildCreateForm(onCreated) {
   return form;
 }
 
-/* Redemption history report (who redeemed which voucher, when). */
+/* Build a CSV string from redemption rows and trigger a browser download. */
+function downloadRedemptionsCsv(rows) {
+  const esc = (v) => {
+    const s = String(v == null ? '' : v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const header = ['Waktu', 'Kode', 'User', 'Telegram ID', 'Nominal'];
+  const lines = [header.join(',')];
+  for (const r of rows) {
+    const who = r.telegram_username ? '@' + r.telegram_username : (r.user_name || '');
+    lines.push([
+      esc(new Date(r.created_at).toISOString()),
+      esc(r.code),
+      esc(who),
+      esc(r.telegram_id || ''),
+      esc(r.amount),
+    ].join(','));
+  }
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `voucher-redemptions-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* Redemption history report (who redeemed which voucher, when).
+   Supports a free-text filter (code/user) and CSV export of the filtered view. */
 async function buildRedemptionsReport() {
   const section = el('div', { style: 'margin-top:26px' },
     el('h3', { style: 'margin:0 0 10px' }, 'Riwayat Pemakaian Voucher')
   );
   try {
     const { data } = await api('/api/admin/vouchers/redemptions');
-    const total = data.reduce((s, r) => s + Number(r.amount || 0), 0);
-    section.appendChild(el('p', { class: 'muted', style: 'margin:0 0 10px' },
-      `${data.length} penukaran · total ${formatIDR(total)}`));
+
+    const search = el('input', { type: 'search', placeholder: 'Cari kode / user…', style: 'flex:1;min-width:180px' });
+    const csvBtn = el('button', { class: 'btn ghost small', type: 'button' }, '⬇️ Export CSV');
+    const bar = el('div', { style: 'display:flex;gap:8px;align-items:center;margin:0 0 10px;flex-wrap:wrap' }, search, csvBtn);
+    const summary = el('p', { class: 'muted', style: 'margin:0 0 10px' });
+
     const t = el('table', { class: 'table' },
       el('thead', {}, el('tr', {},
         el('th', {}, 'Waktu'), el('th', {}, 'Kode'), el('th', {}, 'User'), el('th', {}, 'Nominal')
       ))
     );
     const tb = el('tbody');
-    if (!data.length) {
-      tb.appendChild(el('tr', {}, el('td', { colspan: '4', class: 'muted', style: 'text-align:center;padding:24px' }, 'Belum ada penukaran.')));
-    } else {
-      for (const r of data) {
-        const who = r.telegram_username ? '@' + r.telegram_username
-          : (r.user_name || (r.telegram_id ? 'ID ' + r.telegram_id : '—'));
+    t.appendChild(tb);
+
+    function whoOf(r) {
+      return r.telegram_username ? '@' + r.telegram_username
+        : (r.user_name || (r.telegram_id ? 'ID ' + r.telegram_id : '—'));
+    }
+    function filtered() {
+      const q = search.value.trim().toLowerCase();
+      if (!q) return data;
+      return data.filter((r) =>
+        String(r.code || '').toLowerCase().includes(q) ||
+        whoOf(r).toLowerCase().includes(q)
+      );
+    }
+    function render() {
+      const rows = filtered();
+      const total = rows.reduce((s, r) => s + Number(r.amount || 0), 0);
+      summary.textContent = `${rows.length} penukaran · total ${formatIDR(total)}`;
+      tb.innerHTML = '';
+      if (!rows.length) {
+        tb.appendChild(el('tr', {}, el('td', { colspan: '4', class: 'muted', style: 'text-align:center;padding:24px' },
+          data.length ? 'Tidak ada yang cocok.' : 'Belum ada penukaran.')));
+        return;
+      }
+      for (const r of rows) {
         tb.appendChild(el('tr', {},
           el('td', {}, formatDate(r.created_at)),
           el('td', {}, el('code', {}, r.code)),
-          el('td', {}, who),
+          el('td', {}, whoOf(r)),
           el('td', {}, formatIDR(r.amount))
         ));
       }
     }
-    t.appendChild(tb);
+
+    search.addEventListener('input', render);
+    csvBtn.addEventListener('click', () => {
+      const rows = filtered();
+      if (!rows.length) { toast('Tidak ada data untuk diekspor.', 'err'); return; }
+      downloadRedemptionsCsv(rows);
+    });
+
+    section.appendChild(bar);
+    section.appendChild(summary);
     section.appendChild(t);
+    render();
   } catch (e) {
     section.appendChild(alertBox('err', e.message));
   }
