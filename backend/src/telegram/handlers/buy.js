@@ -121,12 +121,49 @@ async function createAndShowQris(ctx, productId, qty) {
       sent = await ctx.reply(caption + '\n\n⚠️ Gagal membuat gambar QRIS.', { parse_mode: 'HTML', reply_markup: kb });
     }
     if (ctx.session) ctx.session.lastBotMsgId = sent.message_id;
+    scheduleQrExpiry(ctx, res.orderNo, sent.message_id, res.expiresAt);
     return sent;
   }
   // QRIS not configured — show text fallback.
   return editOrReply(ctx,
     caption + '\n\n⚠️ QRIS belum dikonfigurasi. Hubungi admin.', { reply_markup: kb });
 }
+
+/* When a QRIS expires and the order is still unpaid: delete the QR message,
+   send a fresh "expired" notice, release reserved stock, and reopen the menu.
+   Best-effort; works in webhook mode using ctx.api + the chat id. */
+function scheduleQrExpiry(ctx, orderNo, messageId, expiresAt) {
+  const chatId = ctx.chat && ctx.chat.id;
+  if (!chatId || !expiresAt) return;
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  // Cap the timer so a far-future/invalid value can't hang; min 1s.
+  const delay = Math.max(1000, Math.min(ms + 1500, 60 * 60 * 1000));
+  setTimeout(async () => {
+    try {
+      const r = await query("SELECT id, payment_status FROM orders WHERE order_no = $1", [orderNo]);
+      if (!r.rows.length) return;
+      const o = r.rows[0];
+      if (String(o.payment_status).toLowerCase() === 'paid') return; // already paid — leave it
+      // Mark expired + release reserved stock.
+      await query(
+        "UPDATE orders SET status='expired', payment_status='expired', updated_at=now() WHERE id=$1 AND payment_status NOT IN ('paid')",
+        [o.id]
+      );
+      await query(
+        "UPDATE product_stocks SET status='available', reserved_until=NULL, reserved_order_id=NULL WHERE reserved_order_id=$1 AND status IN ('available','reserved')",
+        [o.id]
+      );
+      try { await ctx.api.deleteMessage(chatId, messageId); } catch {}
+      const kb = new InlineKeyboard().text('🛍️ Menu Utama', 'menu:products');
+      await ctx.api.sendMessage(chatId,
+        `⌛ <b>QRIS kedaluwarsa</b>\n` +
+        `Order: <code>${escapeHtml(orderNo)}</code>\n\n` +
+        `Waktu pembayaran habis dan pesanan dibatalkan otomatis. Silakan pesan lagi ya. 🙏`,
+        { parse_mode: 'HTML', reply_markup: kb });
+    } catch (e) { console.error('[buy qr expiry]', e.message); }
+  }, delay).unref?.();
+}
+
 
 /* Cancel a pending order: mark expired/cancelled, release reserved stock, then
    open the main product menu. No-op if already paid. */
@@ -184,9 +221,19 @@ async function checkStatus(ctx, orderNo) {
     return replyClean(ctx, text, { reply_markup: kb });
   }
   const expired = String(o.payment_status).toLowerCase() === 'expired' || String(o.status).toLowerCase() === 'expired';
+  if (expired) {
+    try { await ctx.answerCallbackQuery({ text: 'Pesanan kedaluwarsa.' }); } catch {}
+    try { await ctx.deleteMessage(); } catch {}
+    const kb = new InlineKeyboard().text('🛍️ Menu Utama', 'menu:products');
+    return replyClean(ctx,
+      `⌛ <b>QRIS kedaluwarsa</b>\n` +
+      `Order: <code>${escapeHtml(orderNo)}</code>\n\n` +
+      `Waktu pembayaran sudah habis. Silakan pesan lagi ya. 🙏`,
+      { reply_markup: kb });
+  }
   try {
     await ctx.answerCallbackQuery({
-      text: expired ? 'Pesanan kedaluwarsa. Silakan buat pesanan baru.' : '⏳ Belum ada pembayaran masuk. Coba lagi sebentar.',
+      text: '⏳ Belum ada pembayaran masuk. Coba lagi sebentar.',
       show_alert: true,
     });
   } catch {}

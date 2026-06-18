@@ -88,9 +88,35 @@ async function createAndShowTopupQris(ctx, amount) {
       sent = await ctx.reply(caption + '\n\n⚠️ Gagal membuat gambar QRIS.', { parse_mode: 'HTML', reply_markup: kb });
     }
     if (ctx.session) ctx.session.lastBotMsgId = sent.message_id;
+    scheduleTopupExpiry(ctx, res.orderNo, sent.message_id, res.expiresAt);
     return sent;
   }
   return editOrReply(ctx, caption + '\n\n⚠️ QRIS belum dikonfigurasi. Hubungi admin.', { reply_markup: kb });
+}
+
+/* When a top-up QRIS expires and is still unpaid: delete the QR message, send a
+   fresh "expired" notice, and reopen the main menu. Best-effort. */
+function scheduleTopupExpiry(ctx, orderNo, messageId, expiresAt) {
+  const chatId = ctx.chat && ctx.chat.id;
+  if (!chatId || !expiresAt) return;
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  const delay = Math.max(1000, Math.min(ms + 1500, 60 * 60 * 1000));
+  setTimeout(async () => {
+    try {
+      const r = await query("SELECT id, payment_status FROM orders WHERE order_no = $1 AND order_kind = 'topup'", [orderNo]);
+      if (!r.rows.length) return;
+      const o = r.rows[0];
+      if (String(o.payment_status).toLowerCase() === 'paid') return;
+      await query("UPDATE orders SET status='expired', payment_status='expired', updated_at=now() WHERE id=$1 AND payment_status NOT IN ('paid')", [o.id]);
+      try { await ctx.api.deleteMessage(chatId, messageId); } catch {}
+      const kb = new InlineKeyboard().text('🛍️ Menu Utama', 'menu:products');
+      await ctx.api.sendMessage(chatId,
+        `⌛ <b>QRIS kedaluwarsa</b>\n` +
+        `Order: <code>${orderNo}</code>\n\n` +
+        `Waktu pembayaran habis dan top up dibatalkan otomatis. Silakan coba lagi ya. 🙏`,
+        { parse_mode: 'HTML', reply_markup: kb });
+    } catch (e) { console.error('[topup qr expiry]', e.message); }
+  }, delay).unref?.();
 }
 
 async function checkTopupStatus(ctx, orderNo) {
@@ -111,9 +137,19 @@ async function checkTopupStatus(ctx, orderNo) {
       `✅ <b>Top up berhasil!</b>\nSaldo kamu sekarang: <b>${rupiah(balance)}</b>`, { reply_markup: kb });
   }
   const expired = String(o.payment_status).toLowerCase() === 'expired';
+  if (expired) {
+    try { await ctx.answerCallbackQuery({ text: 'Top up kedaluwarsa.' }); } catch {}
+    try { await ctx.deleteMessage(); } catch {}
+    const kb = new InlineKeyboard().text('🛍️ Menu Utama', 'menu:products');
+    return replyClean(ctx,
+      `⌛ <b>QRIS kedaluwarsa</b>\n` +
+      `Order: <code>${orderNo}</code>\n\n` +
+      `Waktu pembayaran sudah habis. Silakan coba lagi ya. 🙏`,
+      { reply_markup: kb });
+  }
   try {
     await ctx.answerCallbackQuery({
-      text: expired ? 'Top up kedaluwarsa. Buat baru.' : '⏳ Belum ada pembayaran masuk. Coba lagi sebentar.',
+      text: '⏳ Belum ada pembayaran masuk. Coba lagi sebentar.',
       show_alert: true,
     });
   } catch {}
