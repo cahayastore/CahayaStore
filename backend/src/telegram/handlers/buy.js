@@ -99,8 +99,8 @@ async function createAndShowQris(ctx, productId, qty) {
     `⏱️ Berlaku selama ${mins} menit\n` +
     `✨ Pembayaran akan otomatis terdeteksi.`;
   const kb = new InlineKeyboard()
-    .text('🔄 Cek Status Pembayaran', `v3:check:${res.orderNo}`).row()
-    .text('❌ Batalkan Pesanan', `v3:cancel:${res.orderNo}`).row()
+    .text('� Cek Status Pembayaran', `v3:check:${res.orderNo}`).row()
+    .text('🔴 Batalkan Pesanan', `v3:cancel:${res.orderNo}`).row()
     .text('☰ Pesanan Saya', 'v3:orders');
 
   if (res.qrisData) {

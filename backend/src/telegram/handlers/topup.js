@@ -67,8 +67,8 @@ async function createAndShowTopupQris(ctx, amount) {
     `⏱️ Berlaku selama ${mins} menit\n` +
     `✨ Saldo otomatis bertambah setelah lunas.`;
   const kb = new InlineKeyboard()
-    .text('🔄 Cek Status', `tu:check:${res.orderNo}`).row()
-    .text('❌ Batalkan', `tu:cancel:${res.orderNo}`).row()
+    .text('� Cek Status', `tu:check:${res.orderNo}`).row()
+    .text('🔴 Batalkan', `tu:cancel:${res.orderNo}`).row()
     .text('💰 Saldo Saya', 'menu:saldo');
 
   if (res.qrisData) {
