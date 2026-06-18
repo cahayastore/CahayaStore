@@ -2,6 +2,7 @@
 const { InlineKeyboard } = require('grammy');
 const { query } = require('../../db');
 const { escapeHtml } = require('./_shared');
+const { replyClean, editOrReply } = require('./_reply');
 
 async function renderCategories(ctx) {
   const r = await query(
@@ -19,7 +20,7 @@ async function renderCategories(ctx) {
     kb.text(`${c.name} (${c.n})`, `cat:${c.slug}`);
     if (i % 2 === 1) kb.row();
   });
-  await ctx.reply('🗂️ <b>Kategori Produk</b>\nPilih kategori:', { parse_mode: 'HTML', reply_markup: kb });
+  await replyClean(ctx, '🗂️ <b>Kategori Produk</b>\nPilih kategori:', { reply_markup: kb });
 }
 
 function registerCategoryHandlers(bot) {
@@ -42,7 +43,7 @@ function registerCategoryHandlers(bot) {
     r.rows.forEach((p) => {
       kb.text(`${p.name} — Rp${Number(p.price).toLocaleString('id-ID')}`, `prod:${p.slug}`).row();
     });
-    await ctx.reply('Produk dalam kategori:', { reply_markup: kb });
+    await editOrReply(ctx, 'Produk dalam kategori:', { reply_markup: kb });
   });
 }
 

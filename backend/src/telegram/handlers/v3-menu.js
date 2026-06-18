@@ -69,8 +69,8 @@ function menuReplyKeyboard() {
   // Colored buttons (Bot API 9.4+): primary=blue, success=green, danger=red.
   return new Keyboard()
     .text('🛍️ Produk').primary().text('🗂️ Kategori').primary().row()
-    .text('🧾 Pesanan').success().text('💰 Saldo').success().row()
-    .text('🎁 Referral').primary().text('❕ Bantuan').danger().row()
+    .text('💰 Saldo').success().text('🎁 Referral').primary().row()
+    .text('❕ Bantuan').danger().row()
     .resized().persistent();
 }
 
