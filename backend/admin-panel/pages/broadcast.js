@@ -1,4 +1,5 @@
-/* Broadcast page — send a message to all Telegram bot users. */
+/* Broadcast page — send a message to all Telegram bot users.
+   Compact, mobile-friendly layout with an iOS-style toggle. */
 import { el, $, alertBox, toast } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
@@ -16,8 +17,20 @@ function statusLine(s) {
   return `${label} — terkirim ${sent}/${total}` + (failed ? `, gagal ${failed}` : '');
 }
 
+/* iOS-style toggle switch. Returns { wrap, input }. */
+function buildToggle(id, labelText) {
+  const input = el('input', { type: 'checkbox', id, class: 'ios-toggle-input' });
+  const slider = el('span', { class: 'ios-toggle-slider' });
+  const sw = el('label', { class: 'ios-toggle', for: id }, input, slider);
+  const wrap = el('div', { class: 'bc-toggle-row' },
+    el('span', { class: 'bc-toggle-label' }, labelText),
+    sw
+  );
+  return { wrap, input };
+}
+
 export async function pageBroadcast() {
-  const wrap = el('div', {},
+  const wrap = el('div', { class: 'bc-page' },
     el('div', { class: 'page-head' }, el('h1', {}, 'Broadcast Telegram')),
     el('div', { id: 'bc' }, el('p', { class: 'muted' }, 'Memuat...'))
   );
@@ -27,9 +40,8 @@ export async function pageBroadcast() {
     const recipients = aud.data.recipients;
 
     const textArea = el('textarea', {
-      id: 'bc-text', rows: '7',
-      placeholder: 'Tulis pesan broadcast di sini...\nMendukung HTML: <b>tebal</b>, <i>miring</i>, <a href="...">link</a>',
-      style: 'width:100%;font-family:inherit;font-size:14px;padding:12px;border-radius:10px;'
+      id: 'bc-text', rows: '5', class: 'bc-textarea',
+      placeholder: 'Tulis pesan broadcast…\nHTML didukung: <b>tebal</b>, <i>miring</i>, <a href="…">link</a>',
     });
 
     // Optional image (sent as photo with the text as caption).
@@ -39,33 +51,31 @@ export async function pageBroadcast() {
       preset: 'banner',
       onChange: (url) => { imageUrl = url || ''; },
     });
-    const imageField = el('div', { class: 'field', style: 'margin-top:14px' },
+    const imageField = el('div', { class: 'field bc-field' },
       el('label', {}, 'Gambar (opsional)'),
-      el('div', { class: 'hint', style: 'margin-bottom:6px' }, 'Jika diisi, pesan dikirim sebagai foto dengan teks sebagai caption (maks. 1024 karakter).'),
+      el('div', { class: 'bc-hint' }, 'Jika diisi, pesan dikirim sebagai foto + caption (maks. 1024 karakter).'),
       imageUpload
     );
 
-    // Optional inline button that opens the voucher redeem prompt.
-    const voucherChk = el('input', { type: 'checkbox', id: 'bc-voucher-chk' });
+    // Optional inline button that opens the voucher redeem prompt — iOS toggle.
+    const { wrap: toggleRow, input: voucherChk } = buildToggle('bc-voucher-chk', '🎟️ Sertakan tombol Tukar Voucher');
     const voucherCode = el('input', {
-      id: 'bc-voucher-code', placeholder: 'WELCOME10', disabled: 'true',
-      style: 'flex:1;min-width:160px;text-transform:uppercase'
+      id: 'bc-voucher-code', placeholder: 'WELCOME10', disabled: 'true', class: 'bc-vcode',
     });
+    const voucherCodeRow = el('div', { class: 'bc-vcode-row', style: 'display:none' },
+      el('span', { class: 'bc-hint' }, 'Kode:'), voucherCode
+    );
     voucherChk.addEventListener('change', () => {
       voucherCode.disabled = !voucherChk.checked;
+      voucherCodeRow.style.display = voucherChk.checked ? 'flex' : 'none';
       if (voucherChk.checked) voucherCode.focus();
     });
-    const voucherField = el('div', { class: 'field', style: 'margin-top:14px' },
-      el('label', { style: 'display:flex;align-items:center;gap:8px;cursor:pointer' },
-        voucherChk, 'Sertakan tombol 🎟️ Tukar Voucher Sekarang'),
-      el('div', { style: 'display:flex;gap:8px;align-items:center;margin-top:6px' },
-        el('span', { class: 'hint' }, 'Kode voucher:'), voucherCode)
-    );
+    const voucherField = el('div', { class: 'field bc-field' }, toggleRow, voucherCodeRow);
 
-    const status = el('div', { class: 'muted', id: 'bc-status', style: 'margin-top:8px' }, 'Belum ada broadcast.');
+    const status = el('div', { class: 'bc-hint', id: 'bc-status', style: 'margin-top:6px' }, 'Belum ada broadcast.');
 
-    const sendBtn = el('button', { class: 'btn primary', type: 'button' }, `📣 Kirim ke ${recipients} user`);
-    const cancelBtn = el('button', { class: 'btn ghost', type: 'button', style: 'margin-left:8px;display:none' }, 'Batalkan');
+    const sendBtn = el('button', { class: 'btn primary small', type: 'button' }, `📣 Kirim ke ${recipients} user`);
+    const cancelBtn = el('button', { class: 'btn ghost small', type: 'button', style: 'margin-left:8px;display:none' }, 'Batalkan');
 
     async function refreshStatus() {
       try {
@@ -111,14 +121,16 @@ export async function pageBroadcast() {
       catch (e) { toast(e.message, 'err'); }
     });
 
-    const body = el('div', { class: 'card', style: 'padding:18px' },
-      el('p', { class: 'muted', style: 'margin-top:0' },
-        `Pesan akan dikirim ke semua ${recipients} user yang pernah memakai bot. ` +
-        'Pengiriman dibatasi ~20 pesan/detik agar aman dari limit Telegram.'),
-      textArea,
+    const body = el('div', { class: 'card bc-card' },
+      el('p', { class: 'bc-intro' },
+        `Kirim ke ${recipients} user bot · dibatasi ~20 pesan/detik.`),
+      el('div', { class: 'field bc-field' },
+        el('label', {}, 'Pesan'),
+        textArea
+      ),
       imageField,
       voucherField,
-      el('div', { style: 'margin-top:14px' }, sendBtn, cancelBtn),
+      el('div', { class: 'bc-actions' }, sendBtn, cancelBtn),
       status
     );
 
