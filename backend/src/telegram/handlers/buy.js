@@ -6,13 +6,21 @@
    Identity = ctx.from (the Telegram user), so the order + credential
    delivery always belong to the buyer who pressed the button.
    ════════════════════════════════════════════════════════════════════ */
-const { InlineKeyboard, InputFile } = require('grammy');
+const { InlineKeyboard, Keyboard, InputFile } = require('grammy');
 const { query } = require('../../db');
 const { escapeHtml, rupiah, ensureTelegramUser } = require('./_shared');
 const { editOrReply, replyClean, replyEphemeral } = require('./_reply');
 const { createOrderForCustomer } = require('../../checkout.service');
 const { buildQrisCard } = require('../../qris-card.service');
 const { showProductList } = require('./v3-menu');
+
+// Colored custom (reply) keyboard shown under the QR: green check, red cancel.
+function paymentReplyKeyboard() {
+  return new Keyboard()
+    .text('🟢 Cek Status Pembayaran').success().row()
+    .text('🔴 Batalkan Pesanan').danger().row()
+    .resized().persistent();
+}
 
 const MAX_QTY = 100;
 
@@ -99,13 +107,15 @@ async function createAndShowQris(ctx, productId, qty) {
     `⏱️ Berlaku selama ${mins} menit\n` +
     `✨ Pembayaran akan otomatis terdeteksi.`;
   const kb = new InlineKeyboard()
-    .text('� Cek Status Pembayaran', `v3:check:${res.orderNo}`).row()
-    .text('🔴 Batalkan Pesanan', `v3:cancel:${res.orderNo}`).row()
     .text('☰ Pesanan Saya', 'v3:orders');
 
   if (res.qrisData) {
     // Replace the current screen with a photo message (QRIS).
     try { await ctx.deleteMessage(); } catch {}
+    // Remember the active order so the colored reply-keyboard buttons know which
+    // order to check/cancel.
+    if (!ctx.session) ctx.session = {};
+    ctx.session.activePayment = { orderNo: res.orderNo, kind: 'buy' };
     let sent;
     try {
       const card = await buildQrisCard({
@@ -116,6 +126,8 @@ async function createAndShowQris(ctx, productId, qty) {
         subtitle: `${p.name} × ${q}`,
       });
       sent = await ctx.replyWithPhoto(new InputFile(card, `qris-${res.orderNo}.png`), { caption, parse_mode: 'HTML', reply_markup: kb });
+      // Colored buttons live on a reply keyboard (Telegram only colors these).
+      await ctx.reply('👇 Gunakan tombol di bawah:', { reply_markup: paymentReplyKeyboard() });
     } catch (e) {
       console.error('[buy qris card]', e.message);
       sent = await ctx.reply(caption + '\n\n⚠️ Gagal membuat gambar QRIS.', { parse_mode: 'HTML', reply_markup: kb });
@@ -189,6 +201,7 @@ async function cancelOrder(ctx, orderNo) {
       [o.id]
     );
   } catch (e) { console.error('[buy cancel]', e.message); }
+  if (ctx.session) ctx.session.activePayment = null;
   try { await ctx.answerCallbackQuery({ text: '❌ Pesanan dibatalkan.' }); } catch {}
   try { await ctx.deleteMessage(); } catch {}
   return showProductList(ctx, 0);
@@ -207,6 +220,7 @@ async function checkStatus(ctx, orderNo) {
   const paid = String(o.payment_status).toLowerCase() === 'paid';
   if (paid) {
     try { await ctx.answerCallbackQuery({ text: '✅ Pembayaran diterima!' }); } catch {}
+    if (ctx.session) ctx.session.activePayment = null;
     // Credentials are delivered automatically by the payment webhook. Show a
     // confirmation screen here. (If webhook hasn't run yet, the credential
     // message will still arrive shortly.)
@@ -223,20 +237,16 @@ async function checkStatus(ctx, orderNo) {
   const expired = String(o.payment_status).toLowerCase() === 'expired' || String(o.status).toLowerCase() === 'expired';
   if (expired) {
     try { await ctx.answerCallbackQuery({ text: 'Pesanan kedaluwarsa.' }); } catch {}
+    if (ctx.session) ctx.session.activePayment = null;
     try { await ctx.deleteMessage(); } catch {}
-    const kb = new InlineKeyboard().text('🛍️ Menu Utama', 'menu:products');
-    return replyClean(ctx,
-      `⌛ <b>QRIS kedaluwarsa</b>\n` +
-      `Order: <code>${escapeHtml(orderNo)}</code>\n\n` +
-      `Waktu pembayaran sudah habis. Silakan pesan lagi ya. 🙏`,
-      { reply_markup: kb });
+    return showProductList(ctx, 0);
   }
-  try {
-    await ctx.answerCallbackQuery({
-      text: '⏳ Belum ada pembayaran masuk. Coba lagi sebentar.',
-      show_alert: true,
-    });
-  } catch {}
+  // Still pending — feedback works for both callback (alert) and text triggers.
+  if (ctx.callbackQuery) {
+    try { await ctx.answerCallbackQuery({ text: '⏳ Belum ada pembayaran masuk. Coba lagi sebentar.', show_alert: true }); } catch {}
+  } else {
+    return replyClean(ctx, '⏳ Belum ada pembayaran masuk. Tunggu sebentar lalu tekan lagi.');
+  }
 }
 
 function registerBuyHandlers(bot) {
@@ -259,6 +269,18 @@ function registerBuyHandlers(bot) {
   });
   bot.callbackQuery(/^v3:cancel:(.+)$/, async (ctx) => {
     return cancelOrder(ctx, ctx.match[1]);
+  });
+
+  // Colored reply-keyboard buttons under the QR (only for buy-kind payments).
+  bot.hears('🟢 Cek Status Pembayaran', async (ctx, next) => {
+    const ap = ctx.session && ctx.session.activePayment;
+    if (!ap || ap.kind !== 'buy') return typeof next === 'function' ? next() : undefined;
+    return checkStatus(ctx, ap.orderNo);
+  });
+  bot.hears('🔴 Batalkan Pesanan', async (ctx, next) => {
+    const ap = ctx.session && ctx.session.activePayment;
+    if (!ap || ap.kind !== 'buy') return typeof next === 'function' ? next() : undefined;
+    return cancelOrder(ctx, ap.orderNo);
   });
 }
 
