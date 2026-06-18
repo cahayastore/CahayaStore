@@ -11,7 +11,6 @@ function registerComingSoonHandlers(bot) {
 
   bot.hears('🎟️ Voucher', soon('🎟️ <b>Voucher</b>'));
   bot.hears('💸 Tarik Saldo', soon('💸 <b>Tarik Saldo</b>'));
-  bot.hears('🛡️ Garansi', soon('🛡️ <b>Garansi</b>'));
 }
 
 module.exports = { registerComingSoonHandlers };
