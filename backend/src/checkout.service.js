@@ -148,4 +148,72 @@ async function createOrderForCustomer({ customer, items, channel = 'web', custom
   };
 }
 
-module.exports = { createOrderForCustomer, getExpireMinutes, genOrderNo, genToken };
+
+/* Create a TOP UP order (order_kind='topup') + QRIS invoice. No items/stock.
+   On payment, the webhook calls wallet.creditTopup() to credit the balance. */
+async function createTopupOrder({ customer, amount, channel = 'telegram' }) {
+  if (!customer || !customer.id) throw new Error('customer required');
+  const base = Math.max(1000, Math.round(Number(amount) || 0));
+  if (!Number.isFinite(base) || base < 1000) {
+    const err = new Error('Nominal top up minimal Rp1.000.');
+    err.code = 'INVALID_AMOUNT';
+    throw err;
+  }
+
+  const orderNo = genOrderNo();
+  const accessToken = genToken();
+
+  // Unique amount so PayHook can disambiguate concurrent orders by exact rupiah.
+  let uniqueAmount = base;
+  try {
+    const max = await getUniqueMax();
+    const taken = await query(
+      `SELECT p.amount FROM payments p JOIN orders o ON o.id = p.order_id
+        WHERE p.status = 'pending' AND p.amount BETWEEN $1 AND $2`,
+      [base, base + max]
+    );
+    const used = new Set(taken.rows.map((r) => Number(r.amount)));
+    for (let add = 0; add <= max; add += 1) {
+      if (!used.has(base + add)) { uniqueAmount = base + add; break; }
+    }
+  } catch { uniqueAmount = base; }
+
+  const expireMinutes = await getExpireMinutes();
+  const normEmail = customer.email || null;
+
+  const result = await tx(async (client) => {
+    const o = await client.query(
+      `INSERT INTO orders (order_no, user_id, buyer_email, total_amount, status, payment_status, access_token, expires_at, channel, order_kind)
+       VALUES ($1,$2,$3,$4,'pending_payment','pending',$5, now() + ($6 || ' minutes')::interval, $7, 'topup') RETURNING *`,
+      [orderNo, customer.id, normEmail, uniqueAmount, accessToken, String(expireMinutes), channel]
+    );
+    const order = o.rows[0];
+    let invoice;
+    try {
+      invoice = await createInvoice({ orderNo: order.order_no, amount: uniqueAmount });
+    } catch (e) {
+      if (e.code === 'MYQRIS_NOT_CONFIGURED') {
+        invoice = { provider: 'myqris', payment_ref: null, qr_payload: null, amount: uniqueAmount, raw: null };
+      } else throw e;
+    }
+    await client.query(
+      `INSERT INTO payments (order_id, gateway, payment_ref, qr_payload, amount, status, raw_payload)
+       VALUES ($1,$2,$3,$4,$5,'pending',$6)`,
+      [order.id, invoice.provider, invoice.payment_ref, invoice.qr_payload, uniqueAmount, invoice.raw]
+    );
+    return { order, invoice };
+  });
+
+  return {
+    order: result.order,
+    invoice: result.invoice,
+    accessToken,
+    amount: uniqueAmount,
+    baseAmount: base,
+    orderNo: result.order.order_no,
+    qrisData: result.invoice.qr_payload || null,
+    expiresAt: result.order.expires_at,
+  };
+}
+
+module.exports = { createOrderForCustomer, createTopupOrder, getExpireMinutes, genOrderNo, genToken };

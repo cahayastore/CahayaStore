@@ -1,13 +1,19 @@
 'use strict';
 const { InlineKeyboard } = require('grammy');
 const { ensureTelegramUser, rupiah } = require('./_shared');
-const { replyClean } = require('./_reply');
+const { replyClean, editOrReply } = require('./_reply');
 const wallet = require('../../wallet.service');
+const { createTopupOrder } = require('../../checkout.service');
+const { query } = require('../../db');
 
-async function renderSaldo(ctx, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
+const QR_IMG = (data) => `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=10&data=${encodeURIComponent(data)}`;
+// Preset top-up amounts (rupiah).
+const PRESETS = [10000, 20000, 50000, 100000, 200000, 500000];
+
+async function renderSaldo(ctx) {
   let user = null;
   try { user = await ensureTelegramUser(ctx.from); } catch { /* ignore */ }
-  if (!user) return ctx.reply('Tidak dapat memuat akun kamu.');
+  if (!user) return replyClean(ctx, 'Tidak dapat memuat akun kamu. Coba /start dulu.');
 
   const balance = await wallet.getBalance(user.id);
   const txs = await wallet.listTransactions(user.id, 5);
@@ -18,12 +24,80 @@ async function renderSaldo(ctx, { PRODUCT_DOMAIN, MINIAPP_VERSION } = {}) {
       }).join('\n')
     : 'Belum ada transaksi.';
 
-  const kb = new InlineKeyboard()
-    .webApp('➕ Top Up Saldo', `${PRODUCT_DOMAIN}/?miniapp=1&topup=1&v=${MINIAPP_VERSION || '1'}`);
+  const kb = new InlineKeyboard();
+  PRESETS.forEach((amt, i) => {
+    kb.text(rupiah(amt), `tu:amt:${amt}`);
+    if ((i + 1) % 2 === 0) kb.row();
+  });
+  if (PRESETS.length % 2 !== 0) kb.row();
+
   await replyClean(ctx,
-    `💰 <b>Saldo kamu: ${rupiah(balance)}</b>\n\n<b>Transaksi terakhir</b>\n${lines}`,
+    `💰 <b>Saldo kamu: ${rupiah(balance)}</b>\n\n` +
+    `<b>Transaksi terakhir</b>\n${lines}\n\n` +
+    `Pilih nominal top up di bawah:`,
     { reply_markup: kb }
   );
+}
+
+async function createAndShowTopupQris(ctx, amount) {
+  let user = null;
+  try { user = await ensureTelegramUser(ctx.from); } catch { /* ignore */ }
+  if (!user) return editOrReply(ctx, 'Gagal memproses akun. Coba /start dulu.');
+
+  const handle = ctx.from && ctx.from.username
+    ? String(ctx.from.username).toLowerCase().replace(/[^a-z0-9_]/g, '') : '';
+  const email = user.email || (handle ? `${handle}@telegram.cahayastore.me` : `tg${ctx.from.id}@telegram.cahayastore.me`);
+
+  let res;
+  try {
+    res = await createTopupOrder({ customer: { id: user.id, email }, amount, channel: 'telegram' });
+  } catch (e) {
+    console.error('[topup create]', e.message);
+    return editOrReply(ctx, `Gagal membuat top up: ${e.message}`);
+  }
+
+  const caption =
+    `💰 <b>Top Up Saldo</b>\n` +
+    `Order: <code>${res.orderNo}</code>\n` +
+    `Nominal masuk saldo: <b>${rupiah(res.baseAmount)}</b>\n\n` +
+    `💳 Bayar <b>TEPAT</b>: <code>${rupiah(res.amount)}</code>\n` +
+    `<i>Nominal unik agar pembayaran terdeteksi otomatis. Bayar pas sampai digit terakhir.</i>\n\n` +
+    `Scan QRIS di atas. Saldo otomatis bertambah setelah lunas.`;
+  const kb = new InlineKeyboard()
+    .text('🔄 Cek Status', `tu:check:${res.orderNo}`).row()
+    .text('💰 Saldo Saya', 'menu:saldo');
+
+  if (res.qrisData) {
+    try { await ctx.deleteMessage(); } catch {}
+    const sent = await ctx.replyWithPhoto(QR_IMG(res.qrisData), { caption, parse_mode: 'HTML', reply_markup: kb });
+    if (ctx.session) ctx.session.lastBotMsgId = sent.message_id;
+    return sent;
+  }
+  return editOrReply(ctx, caption + '\n\n⚠️ QRIS belum dikonfigurasi. Hubungi admin.', { reply_markup: kb });
+}
+
+async function checkTopupStatus(ctx, orderNo) {
+  const r = await query(
+    "SELECT id, payment_status, user_id FROM orders WHERE order_no = $1 AND order_kind = 'topup'",
+    [orderNo]
+  );
+  if (!r.rows.length) { try { await ctx.answerCallbackQuery({ text: 'Order tidak ditemukan.' }); } catch {} return; }
+  const o = r.rows[0];
+  if (String(o.payment_status).toLowerCase() === 'paid') {
+    try { await ctx.answerCallbackQuery({ text: '✅ Pembayaran diterima!' }); } catch {}
+    const balance = await wallet.getBalance(o.user_id);
+    const kb = new InlineKeyboard().text('💰 Saldo Saya', 'menu:saldo').text('📦 Belanja', 'menu:products');
+    try { await ctx.deleteMessage(); } catch {}
+    return replyClean(ctx,
+      `✅ <b>Top up berhasil!</b>\nSaldo kamu sekarang: <b>${rupiah(balance)}</b>`, { reply_markup: kb });
+  }
+  const expired = String(o.payment_status).toLowerCase() === 'expired';
+  try {
+    await ctx.answerCallbackQuery({
+      text: expired ? 'Top up kedaluwarsa. Buat baru.' : '⏳ Belum ada pembayaran masuk. Coba lagi sebentar.',
+      show_alert: true,
+    });
+  } catch {}
 }
 
 function registerTopupHandlers(bot, opts = {}) {
@@ -32,6 +106,14 @@ function registerTopupHandlers(bot, opts = {}) {
   bot.hears('💰 Saldo', (ctx) => renderSaldo(ctx, opts));
   bot.hears('💰 Top Up', (ctx) => renderSaldo(ctx, opts));
   bot.callbackQuery('menu:saldo', async (ctx) => { await ctx.answerCallbackQuery(); return renderSaldo(ctx, opts); });
+
+  bot.callbackQuery(/^tu:amt:(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery({ text: 'Membuat QRIS…' });
+    return createAndShowTopupQris(ctx, Number(ctx.match[1]));
+  });
+  bot.callbackQuery(/^tu:check:(.+)$/, async (ctx) => {
+    return checkTopupStatus(ctx, ctx.match[1]);
+  });
 }
 
 module.exports = { registerTopupHandlers, renderSaldo };
