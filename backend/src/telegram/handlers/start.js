@@ -46,22 +46,11 @@ function registerStartHandlers(bot) {
       } catch (e) { console.error('[tg start ref]', e.message); }
     }
 
-    // Single-screen UX: if a banner is configured, show it (with the colored menu
-    // keyboard). Otherwise skip straight to the product list (which already carries
-    // the keyboard) — no redundant greeting message.
-    let banner = null;
-    try { banner = await getSetting(KEYS.BOT_BANNER); } catch (e) {}
-    if (banner && banner.image_url) {
-      try {
-        await ctx.replyWithPhoto(banner.image_url, {
-          caption: (banner.caption || '').trim() || undefined,
-          parse_mode: 'HTML',
-          reply_markup: menuReplyKeyboard(),
-        });
-      } catch (e) { console.error('[tg start banner]', e.message); }
-    }
+    // Single-screen UX: show the banner photo WITH the product list as its
+    // caption (one combined message), then fall back to a plain list if the
+    // banner isn't set or the caption is too long.
     try {
-      await showProductList(ctx, 0);
+      await showProductList(ctx, 0, { withBanner: true });
     } catch (e) { console.error('[tg start v3]', e.message); }
   });
 

@@ -7,6 +7,7 @@ const { InlineKeyboard, Keyboard } = require('grammy');
 const { query } = require('../../db');
 const { escapeHtml, rupiah } = require('./_shared');
 const { replyClean, editOrReply } = require('./_reply');
+const { getSetting, KEYS } = require('../../settings.service');
 
 const PAGE_SIZE = 15;
 const NUM_COLUMNS = 6;
@@ -88,7 +89,8 @@ function buildListReplyKeyboard({ products, page, totalPages }) {
   return kb.resized().persistent();
 }
 
-async function showProductList(ctx, page = 0, _edit = false) {
+async function showProductList(ctx, page = 0, opts = {}) {
+  const { withBanner = false } = (typeof opts === 'object' && opts) || {};
   const { products, total } = await fetchProductsPage(page);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const text = buildListText({ userName: ctx.from?.first_name, products, page, totalPages });
@@ -102,6 +104,22 @@ async function showProductList(ctx, page = 0, _edit = false) {
   ctx.session.listTotalPages = totalPages;
 
   const reply_markup = buildListReplyKeyboard({ products, page, totalPages });
+
+  // On the first screen (e.g. /start), merge the banner + list into ONE message:
+  // the banner is the photo and the product list is its caption. Caption max is
+  // 1024 chars; fall back to a plain text list if it's longer or no banner set.
+  if (withBanner && page === 0) {
+    let banner = null;
+    try { banner = await getSetting(KEYS.BOT_BANNER); } catch (e) {}
+    if (banner && banner.image_url && text.length <= 1024) {
+      try {
+        return await ctx.replyWithPhoto(banner.image_url, {
+          caption: text, parse_mode: 'HTML', reply_markup,
+        });
+      } catch (e) { console.error('[v3 list banner]', e.message); }
+    }
+  }
+
   return replyClean(ctx, text, { reply_markup });
 }
 
