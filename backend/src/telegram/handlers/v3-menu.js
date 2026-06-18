@@ -66,11 +66,12 @@ function buildListKeyboard({ products, page, totalPages }) {
 }
 
 function menuReplyKeyboard() {
-  // Colored buttons (Bot API 9.4+): primary=blue, success=green, danger=red.
+  // V2 Marketku-style colored custom keyboard (Bot API 9.4+ styles).
   return new Keyboard()
-    .text('🛍️ Produk').primary().text('🗂️ Kategori').primary().row()
-    .text('💰 Saldo').success().text('🎁 Referral').primary().row()
-    .text('❕ Bantuan').danger().row()
+    .text('📦 Daftar Produk').primary().text('🎟️ Voucher').primary().text('📋 Pesanan Saya').primary().row()
+    .text('💰 Top Up').success().text('💸 Tarik Saldo').success().text('🛡️ Garansi').primary().row()
+    .text('👨‍💻 Bantuan').danger().row()
+    .text('/start').danger().row()
     .resized().persistent();
 }
 

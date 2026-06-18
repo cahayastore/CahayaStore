@@ -35,6 +35,7 @@ function registerProductHandlers(bot, opts = {}) {
   bot.command('products', (ctx) => showProductList(ctx, 0));
   bot.hears('Menu', (ctx) => showProductList(ctx, 0));
   bot.hears('🛍️ Produk', (ctx) => showProductList(ctx, 0));
+  bot.hears('📦 Daftar Produk', (ctx) => showProductList(ctx, 0));
   bot.callbackQuery('menu:products', async (ctx) => { await ctx.answerCallbackQuery(); return showProductList(ctx, 0); });
 
   // Pagination + back-to-list.

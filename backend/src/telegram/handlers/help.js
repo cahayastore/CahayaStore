@@ -15,6 +15,7 @@ function registerHelpHandlers(bot) {
   );
   bot.command('bantuan', help);
   bot.hears('❕ Bantuan', help);
+  bot.hears('👨‍💻 Bantuan', help);
   bot.command('help', help);
   bot.callbackQuery('menu:help', async (ctx) => { await ctx.answerCallbackQuery(); return help(ctx); });
 }
