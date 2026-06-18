@@ -39,15 +39,20 @@ async function fetchProductsPage(page) {
   return { products: r.rows, total: c.rows[0].n };
 }
 
-function buildListText({ userName, products, page, totalPages }) {
-  const rows = products.map((p, i) =>
-    `${i + 1}. <b>${escapeHtml(compactName(p.name))}</b> — ${rupiah(p.price)} · ${Number(p.stock)} stok`
-  );
-  const lines = [`<blockquote>✪ Hi ${escapeHtml(userName || 'Kak')}</blockquote>`, '', ...rows];
-  if (!products.length) lines.push('Belum ada produk.');
-  if (totalPages > 1) lines.push('', `Halaman ${page + 1}/${totalPages}`);
-  lines.push('', '<blockquote>Tekan nomor di keyboard untuk pilih produk.</blockquote>');
-  lines.push(`<blockquote>⟲ ${wibStamp()}</blockquote>`);
+function buildListText({ products, page, totalPages }) {
+  // V2 Marketku clean style: "LIST PRODUCT" + "[n]. Name ( stock )".
+  const rows = products.map((p, idx) => {
+    const stock = Number(p.stock);
+    const stockLabel = (stock > 9999 || stock < 0) ? '∞' : String(stock);
+    return `[${idx + 1}]. ${escapeHtml(compactName(p.name, 38))} ( ${stockLabel} )`;
+  });
+  const d = new Date(Date.now() + 7 * 60 * 60 * 1000);
+  const pad = (n) => String(n).padStart(2, '0');
+  const time = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  const lines = ['LIST PRODUCT', ''];
+  if (products.length) lines.push(...rows);
+  else lines.push('Produk sedang kosong.');
+  lines.push('', `📄 Halaman ${page + 1} / ${totalPages}`, `📆 ${time} WIB`);
   return lines.join('\n');
 }
 
