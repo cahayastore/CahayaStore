@@ -11,6 +11,7 @@ import { pageBanners } from './pages/banners.js';
 import { pagePayment } from './pages/payment.js';
 import { pageSettings } from './pages/settings.js';
 import { pageBroadcast } from './pages/broadcast.js';
+import { pageVouchers } from './pages/vouchers.js';
 
 const ROUTES = {
   '#/login': pageLogin,
@@ -22,7 +23,8 @@ const ROUTES = {
   '#/banners': pageBanners,
   '#/payment': pagePayment,
   '#/settings': pageSettings,
-  '#/broadcast': pageBroadcast
+  '#/broadcast': pageBroadcast,
+  '#/vouchers': pageVouchers
 };
 
 async function render() {

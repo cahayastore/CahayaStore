@@ -11,6 +11,7 @@ const { registerReferralHandlers } = require('./referral');
 const { registerPromoHandlers } = require('./promo');
 const { registerHelpHandlers } = require('./help');
 const { registerComingSoonHandlers } = require('./coming-soon');
+const { registerVoucherHandlers } = require('./voucher');
 
 function registerHandlers(bot, opts = {}) {
   // Order matters: specific commands before catch-alls.
@@ -24,6 +25,7 @@ function registerHandlers(bot, opts = {}) {
   registerReferralHandlers(bot, opts);
   registerPromoHandlers(bot, opts);
   registerHelpHandlers(bot, opts);
+  registerVoucherHandlers(bot, opts);
   registerComingSoonHandlers(bot, opts);
 }
 

@@ -9,7 +9,6 @@ function registerComingSoonHandlers(bot) {
     'Sementara ini, gunakan 📦 Daftar Produk untuk mulai belanja.'
   );
 
-  bot.hears('🎟️ Voucher', soon('🎟️ <b>Voucher</b>'));
   bot.hears('💸 Tarik Saldo', soon('💸 <b>Tarik Saldo</b>'));
 }
 
