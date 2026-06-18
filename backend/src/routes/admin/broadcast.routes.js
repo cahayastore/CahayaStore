@@ -26,11 +26,17 @@ router.get('/broadcast/status', (_req, res) => {
 });
 
 /* POST /api/admin/broadcast — start a broadcast.
-   body: { text: string, parseMode?: 'HTML'|'none' } */
+   body: { text: string, parseMode?: 'HTML'|'none', imageUrl?: string, voucherCode?: string } */
 router.post('/broadcast', async (req, res) => {
   const text = String((req.body && req.body.text) || '').trim();
-  if (!text) return res.status(400).json({ success: false, message: 'Teks pesan wajib diisi.' });
-  if (text.length > 4000) return res.status(400).json({ success: false, message: 'Pesan maksimal 4000 karakter.' });
+  const imageUrl = String((req.body && req.body.imageUrl) || '').trim() || null;
+  const voucherCode = String((req.body && req.body.voucherCode) || '').trim().toUpperCase() || null;
+  // With an image, the text becomes the caption (max 1024). Without, max 4000.
+  if (!text && !imageUrl) return res.status(400).json({ success: false, message: 'Teks atau gambar wajib diisi.' });
+  const maxLen = imageUrl ? 1024 : 4000;
+  if (text.length > maxLen) {
+    return res.status(400).json({ success: false, message: `Pesan maksimal ${maxLen} karakter${imageUrl ? ' (karena ada gambar)' : ''}.` });
+  }
   if (current && current.status === 'running') {
     return res.status(409).json({ success: false, message: 'Broadcast lain sedang berjalan.' });
   }
@@ -59,12 +65,22 @@ router.post('/broadcast', async (req, res) => {
   res.json({ success: true, data: { id: job.id, total: job.total, status: job.status } });
 
   (async () => {
-    const { sendMessage } = require('../../telegram/bot-loader');
-    const opts = parseMode ? { parse_mode: parseMode } : { parse_mode: undefined };
+    const { sendMessage, sendPhoto } = require('../../telegram/bot-loader');
+    const baseOpts = parseMode ? { parse_mode: parseMode } : { parse_mode: undefined };
+    // Optional inline button that opens the voucher redeem prompt.
+    let reply_markup;
+    if (voucherCode) {
+      reply_markup = { inline_keyboard: [[{ text: '🎟️ Tukar Voucher Sekarang', callback_data: 'menu:voucher' }]] };
+    }
+    const opts = { ...baseOpts, ...(reply_markup ? { reply_markup } : {}) };
     for (const chatId of recipients) {
       if (job.status === 'cancelled') break;
       try {
-        await sendMessage(chatId, text, opts);
+        if (imageUrl) {
+          await sendPhoto(chatId, imageUrl, text, opts);
+        } else {
+          await sendMessage(chatId, text, opts);
+        }
         job.sent += 1;
       } catch (e) {
         job.failed += 1;
@@ -80,7 +96,7 @@ router.post('/broadcast', async (req, res) => {
     try {
       await query(
         "INSERT INTO audit_logs (action, entity_type, entity_id, metadata) VALUES ('broadcast.sent','broadcast',NULL,$1)",
-        [JSON.stringify({ total: job.total, sent: job.sent, failed: job.failed })]
+        [JSON.stringify({ total: job.total, sent: job.sent, failed: job.failed, image: !!imageUrl, voucher: voucherCode || null })]
       );
     } catch (e) { /* audit best-effort */ }
   })().catch((e) => {

@@ -2,6 +2,7 @@
 import { el, $, alertBox, toast } from '../dom.js';
 import { api } from '../api.js';
 import { shell } from '../shell.js';
+import { buildImageUpload } from '../upload-widget.js';
 
 let pollTimer = null;
 
@@ -31,6 +32,36 @@ export async function pageBroadcast() {
       style: 'width:100%;font-family:inherit;font-size:14px;padding:12px;border-radius:10px;'
     });
 
+    // Optional image (sent as photo with the text as caption).
+    let imageUrl = '';
+    const imageUpload = buildImageUpload({
+      value: '',
+      preset: 'banner',
+      onChange: (url) => { imageUrl = url || ''; },
+    });
+    const imageField = el('div', { class: 'field', style: 'margin-top:14px' },
+      el('label', {}, 'Gambar (opsional)'),
+      el('div', { class: 'hint', style: 'margin-bottom:6px' }, 'Jika diisi, pesan dikirim sebagai foto dengan teks sebagai caption (maks. 1024 karakter).'),
+      imageUpload
+    );
+
+    // Optional inline button that opens the voucher redeem prompt.
+    const voucherChk = el('input', { type: 'checkbox', id: 'bc-voucher-chk' });
+    const voucherCode = el('input', {
+      id: 'bc-voucher-code', placeholder: 'WELCOME10', disabled: 'true',
+      style: 'flex:1;min-width:160px;text-transform:uppercase'
+    });
+    voucherChk.addEventListener('change', () => {
+      voucherCode.disabled = !voucherChk.checked;
+      if (voucherChk.checked) voucherCode.focus();
+    });
+    const voucherField = el('div', { class: 'field', style: 'margin-top:14px' },
+      el('label', { style: 'display:flex;align-items:center;gap:8px;cursor:pointer' },
+        voucherChk, 'Sertakan tombol 🎟️ Tukar Voucher Sekarang'),
+      el('div', { style: 'display:flex;gap:8px;align-items:center;margin-top:6px' },
+        el('span', { class: 'hint' }, 'Kode voucher:'), voucherCode)
+    );
+
     const status = el('div', { class: 'muted', id: 'bc-status', style: 'margin-top:8px' }, 'Belum ada broadcast.');
 
     const sendBtn = el('button', { class: 'btn primary', type: 'button' }, `📣 Kirim ke ${recipients} user`);
@@ -50,11 +81,21 @@ export async function pageBroadcast() {
 
     sendBtn.addEventListener('click', async () => {
       const text = textArea.value.trim();
-      if (!text) { toast('Pesan masih kosong.', 'err'); return; }
+      if (!text && !imageUrl) { toast('Pesan atau gambar wajib diisi.', 'err'); return; }
+      const useVoucher = voucherChk.checked;
+      const vcode = voucherCode.value.trim().toUpperCase();
+      if (useVoucher && !vcode) { toast('Isi kode voucher untuk tombolnya.', 'err'); return; }
       if (!confirm(`Kirim broadcast ke ${recipients} user?`)) return;
       sendBtn.disabled = true;
       try {
-        await api('/api/admin/broadcast', { method: 'POST', body: JSON.stringify({ text, parseMode: 'HTML' }) });
+        await api('/api/admin/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({
+            text, parseMode: 'HTML',
+            imageUrl: imageUrl || undefined,
+            voucherCode: useVoucher ? vcode : undefined,
+          }),
+        });
         toast('Broadcast dimulai.', 'ok');
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(refreshStatus, 1500);
@@ -75,6 +116,8 @@ export async function pageBroadcast() {
         `Pesan akan dikirim ke semua ${recipients} user yang pernah memakai bot. ` +
         'Pengiriman dibatasi ~20 pesan/detik agar aman dari limit Telegram.'),
       textArea,
+      imageField,
+      voucherField,
       el('div', { style: 'margin-top:14px' }, sendBtn, cancelBtn),
       status
     );

@@ -197,6 +197,19 @@ async function sendMessage(chatId, text, opts = {}) {
   return { ok: true };
 }
 
+/* Send a photo with an optional HTML caption. Best-effort. */
+async function sendPhoto(chatId, photo, caption = '', opts = {}) {
+  if (!chatId) return { ok: false, reason: 'no_chat_id' };
+  if (!photo) return { ok: false, reason: 'no_photo' };
+  const bot = await ensureBot();
+  await bot.api.sendPhoto(String(chatId), photo, {
+    parse_mode: 'HTML',
+    ...(caption ? { caption } : {}),
+    ...opts,
+  });
+  return { ok: true };
+}
+
 /* Notify the admin chat that an order has been paid. Never throws. */
 async function notifyOrderPaid(order) {
   try {
@@ -241,6 +254,6 @@ async function verifyWebhookSecret(provided) {
 
 module.exports = {
   ensureBot, handleUpdate, registerWebhook, deleteWebhook, clearCache,
-  sendMessage, notifyOrderPaid, notifyBuyer, resolveToken, verifyWebhookSecret,
+  sendMessage, sendPhoto, notifyOrderPaid, notifyBuyer, resolveToken, verifyWebhookSecret,
   DEFAULT_BOT_ID, escapeHtml,
 };
