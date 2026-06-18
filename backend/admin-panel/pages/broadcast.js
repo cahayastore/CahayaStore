@@ -85,6 +85,9 @@ export async function pageBroadcast() {
         const running = s && s.status === 'running';
         sendBtn.disabled = running;
         cancelBtn.style.display = running ? 'inline-flex' : 'none';
+        // Keep polling while a broadcast runs (even if it was started in a
+        // previous visit / another tab) and stop once it's finished.
+        if (running && !pollTimer) { pollTimer = setInterval(refreshStatus, 1500); }
         if (!running && pollTimer) { clearInterval(pollTimer); pollTimer = null; }
       } catch (e) { /* ignore poll errors */ }
     }
@@ -123,7 +126,8 @@ export async function pageBroadcast() {
 
     const body = el('div', { class: 'card bc-card' },
       el('p', { class: 'bc-intro' },
-        `Kirim ke ${recipients} user bot · dibatasi ~20 pesan/detik.`),
+        `Kirim ke ${recipients} user bot · dibatasi ~20 pesan/detik. ` +
+        'Berjalan di latar belakang — aman ditutup, progres lanjut otomatis saat dibuka lagi.'),
       el('div', { class: 'field bc-field' },
         el('label', {}, 'Pesan'),
         textArea
