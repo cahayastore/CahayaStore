@@ -1,15 +1,15 @@
 'use strict';
-/* v3-style product menu (mirrors Marketku customer-v3 mode):
-   - Numbered product list with blockquote greeting + timestamp.
-   - Inline keyboard: number buttons (5 cols) + pagination + Pesanan/Info.
-   - Persistent reply keyboard with a single "Menu" button. */
+/* v3 product menu — Marketku V2 style.
+   Product list uses a CUSTOM (reply) keyboard: top menu row + numbered
+   product buttons (5 cols) + pagination + utility rows. Pressing a number
+   opens the product detail (mapped via session). */
 const { InlineKeyboard, Keyboard } = require('grammy');
 const { query } = require('../../db');
 const { escapeHtml, rupiah } = require('./_shared');
 const { replyClean, editOrReply } = require('./_reply');
 
 const PAGE_SIZE = 15;
-const COLUMNS = 6;
+const NUM_COLUMNS = 5;
 
 function compactName(name, max = 30) {
   const t = String(name || 'Produk').replace(/\s+/g, ' ').trim();
@@ -46,27 +46,13 @@ function buildListText({ userName, products, page, totalPages }) {
   const lines = [`<blockquote>✪ Hi ${escapeHtml(userName || 'Kak')}</blockquote>`, '', ...rows];
   if (!products.length) lines.push('Belum ada produk.');
   if (totalPages > 1) lines.push('', `Halaman ${page + 1}/${totalPages}`);
-  lines.push('', `<blockquote>⟲ ${wibStamp()}</blockquote>`);
+  lines.push('', '<blockquote>Tekan nomor di keyboard untuk pilih produk.</blockquote>');
+  lines.push(`<blockquote>⟲ ${wibStamp()}</blockquote>`);
   return lines.join('\n');
 }
 
-function buildListKeyboard({ products, page, totalPages }) {
-  const kb = new InlineKeyboard();
-  products.forEach((p, i) => {
-    kb.text(String(i + 1), `v3:p:${p.id}`);
-    if ((i + 1) % COLUMNS === 0) kb.row();
-  });
-  if (products.length && products.length % COLUMNS !== 0) kb.row();
-  let nav = false;
-  if (page > 0) { kb.text('← Kembali', `v3:page:${page - 1}`); nav = true; }
-  if (page + 1 < totalPages) { kb.text('➡️ Selanjutnya', `v3:page:${page + 1}`); nav = true; }
-  if (nav) kb.row();
-  kb.text('☰ Pesanan', 'v3:orders').text('❕ Informasi', 'v3:info').row();
-  return kb;
-}
-
+/* The main menu keyboard (no product numbers) — used outside the product list. */
 function menuReplyKeyboard() {
-  // V2 Marketku-style colored custom keyboard (Bot API 9.4+ styles).
   return new Keyboard()
     .text('📦 Daftar Produk').primary().text('🎟️ Voucher').primary().text('📋 Pesanan Saya').primary().row()
     .text('💰 Top Up').success().text('💸 Tarik Saldo').success().text('🛡️ Garansi').primary().row()
@@ -75,17 +61,46 @@ function menuReplyKeyboard() {
     .resized().persistent();
 }
 
-async function showProductList(ctx, page = 0, edit = false) {
+/* The product-list keyboard: top menu + numbered product buttons + pagination
+   + utility rows. Mirrors Marketku V2 getProductPageKeyboard. */
+function buildListReplyKeyboard({ itemCount, page, totalPages }) {
+  const kb = new Keyboard();
+  // Top menu row
+  kb.text('📦 Daftar Produk').primary().text('🎟️ Voucher').primary().text('📋 Pesanan Saya').primary().row();
+  // Number buttons (5 per row)
+  for (let i = 1; i <= itemCount; i += 1) {
+    kb.text(String(i)).primary();
+    if (i % NUM_COLUMNS === 0) kb.row();
+  }
+  if (itemCount % NUM_COLUMNS !== 0) kb.row();
+  // Pagination
+  let nav = false;
+  if (page > 0) { kb.text('← Kembali').primary(); nav = true; }
+  if (page + 1 < totalPages) { kb.text('➡️ Selanjutnya').primary(); nav = true; }
+  if (nav) kb.row();
+  // Utility rows
+  kb.text('💰 Top Up').success().text('💸 Tarik Saldo').success().text('🛡️ Garansi').primary().row();
+  kb.text('👨‍💻 Bantuan').danger().row();
+  kb.text('/start').danger().row();
+  return kb.resized().persistent();
+}
+
+async function showProductList(ctx, page = 0, _edit = false) {
   const { products, total } = await fetchProductsPage(page);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const text = buildListText({ userName: ctx.from?.first_name, products, page, totalPages });
-  const reply_markup = buildListKeyboard({ products, page, totalPages });
-  if (edit && ctx.callbackQuery) {
-    return editOrReply(ctx, text, { reply_markup });
-  }
+
+  // Remember which products map to which numbers on this page (for number presses).
+  if (!ctx.session) ctx.session = {};
+  ctx.session.listProductIds = products.map((p) => String(p.id));
+  ctx.session.listPage = page;
+  ctx.session.listTotalPages = totalPages;
+
+  const reply_markup = buildListReplyKeyboard({ itemCount: products.length, page, totalPages });
   return replyClean(ctx, text, { reply_markup });
 }
 
 module.exports = {
-  PAGE_SIZE, showProductList, fetchProductsPage, menuReplyKeyboard, compactName, wibStamp,
+  PAGE_SIZE, NUM_COLUMNS, showProductList, fetchProductsPage,
+  menuReplyKeyboard, buildListReplyKeyboard, compactName, wibStamp,
 };
