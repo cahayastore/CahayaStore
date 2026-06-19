@@ -13,6 +13,7 @@ router.use(require('./categories.routes'));
 router.use(require('./orders.routes'));
 router.use(require('./broadcast.routes'));
 router.use(require('./vouchers.routes'));
+router.use(require('./users.routes'));
 router.use(require('./settings.routes'));
 router.use(require('./uploads.routes'));
 
