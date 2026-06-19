@@ -66,10 +66,32 @@ async function creditTopup(orderId) {
       [orderId]
     );
     if (dup.rows.length) return { ok: true, already: true };
-    const balance = await adjust(client, {
-      userId: order.user_id, type: 'topup', amount: Number(order.total_amount),
+    const base = Number(order.total_amount);
+    let balance = await adjust(client, {
+      userId: order.user_id, type: 'topup', amount: base,
       refOrderId: orderId, note: 'Top up saldo',
     });
+
+    // Apply a configurable top-up bonus: free balance when the top-up reaches a
+    // certain nominal. Tiers are { min, bonus }; the highest matching tier wins.
+    try {
+      const { getSetting, KEYS } = require('./settings.service');
+      const cfg = await getSetting(KEYS.TOPUP_BONUS);
+      if (cfg && cfg.enabled && Array.isArray(cfg.tiers) && cfg.tiers.length) {
+        const eligible = cfg.tiers
+          .map((t) => ({ min: Number(t.min) || 0, bonus: Math.round(Number(t.bonus) || 0) }))
+          .filter((t) => t.bonus > 0 && base >= t.min)
+          .sort((a, b) => b.min - a.min);
+        if (eligible.length) {
+          const { min, bonus } = eligible[0];
+          balance = await adjust(client, {
+            userId: order.user_id, type: 'adjustment', amount: bonus,
+            refOrderId: orderId, note: `Bonus top up (≥ ${min})`,
+          });
+        }
+      }
+    } catch (e) { console.error('[topup bonus]', e.message); }
+
     return { ok: true, balance };
   });
 }

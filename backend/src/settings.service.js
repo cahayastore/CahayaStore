@@ -10,7 +10,8 @@ const KEYS = {
   STORE_BANNERS: 'store.banners',     // { items: [{ id, image_url, link, alt, active, order }] }
   ORDER_POLICY: 'order.policy',       // { expiry_minutes }
   BOT_INFO_TEXT: 'bot.info_text',     // { text: string } - Info text shown when user clicks Info button
-  BOT_BANNER: 'bot.banner'            // { image_url, caption } - banner shown on /start
+  BOT_BANNER: 'bot.banner',           // { image_url, caption } - banner shown on /start
+  TOPUP_BONUS: 'topup.bonus'          // { enabled, tiers: [{ min, bonus }] } - free balance when top up >= min
 };
 
 async function getSetting(key) {
