@@ -126,6 +126,32 @@ router.post('/users/:id/balance', async (req, res) => {
   }
 });
 
+/* POST /api/admin/users/:id/message — send a Telegram message to the user.
+   body: { text: string } */
+router.post('/users/:id/message', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const text = String((req.body && req.body.text) || '').trim();
+    if (!text) return res.status(400).json({ success: false, message: 'Pesan tidak boleh kosong.' });
+    if (text.length > 4000) return res.status(400).json({ success: false, message: 'Pesan maksimal 4000 karakter.' });
+    const u = await query("SELECT telegram_id FROM users WHERE id = $1", [id]);
+    if (!u.rows.length) return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
+    if (!u.rows[0].telegram_id) {
+      return res.status(400).json({ success: false, message: 'User ini tidak terhubung ke Telegram.' });
+    }
+    const loader = require('../../telegram/bot-loader');
+    try {
+      await loader.sendMessage(String(u.rows[0].telegram_id), text, { parse_mode: 'HTML' });
+    } catch (e) {
+      return res.status(502).json({ success: false, message: 'Gagal mengirim: ' + e.message });
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[user message]', e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 /* PUT /api/admin/users/:id/active — ban/unban. body: { active: bool } */
 router.put('/users/:id/active', async (req, res) => {
   try {

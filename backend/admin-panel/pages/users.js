@@ -61,6 +61,27 @@ async function openUserDetail(id, reloadList) {
     } catch (e) { toast(e.message, 'err'); }
   });
 
+  // Send a Telegram message to the user.
+  const hasTg = !!u.telegram_id;
+  const msgInput = el('textarea', {
+    rows: '3', placeholder: hasTg ? 'Tulis pesan untuk user… (HTML didukung)' : 'User tidak terhubung ke Telegram',
+    style: 'width:100%;font-family:inherit;font-size:13px;padding:10px;border-radius:10px',
+  });
+  if (!hasTg) msgInput.disabled = true;
+  const sendMsgBtn = el('button', { class: 'btn primary small', type: 'button' }, '📨 Kirim Pesan');
+  if (!hasTg) sendMsgBtn.disabled = true;
+  sendMsgBtn.addEventListener('click', async () => {
+    const text = msgInput.value.trim();
+    if (!text) { toast('Pesan masih kosong.', 'err'); return; }
+    sendMsgBtn.disabled = true;
+    try {
+      await api(`/api/admin/users/${id}/message`, { method: 'POST', body: JSON.stringify({ text }) });
+      msgInput.value = '';
+      toast('Pesan terkirim.', 'ok');
+    } catch (e) { toast(e.message, 'err'); }
+    sendMsgBtn.disabled = false;
+  });
+
   // Transactions table.
   const txBody = el('tbody');
   if (!d.transactions.length) {
@@ -87,6 +108,10 @@ async function openUserDetail(id, reloadList) {
     ),
     el('div', {}, el('div', { class: 'muted' }, u.email || '—'),
       u.telegram_id ? el('div', { class: 'muted' }, 'Telegram ID: ' + u.telegram_id) : null),
+    el('hr', { style: 'margin:14px 0;border:none;border-top:1px solid var(--color-border,#e5e7eb)' }),
+    el('div', { style: 'font-weight:600;margin-bottom:8px' }, 'Kirim Pesan ke User'),
+    msgInput,
+    el('div', { style: 'margin-top:8px' }, sendMsgBtn),
     el('hr', { style: 'margin:14px 0;border:none;border-top:1px solid var(--color-border,#e5e7eb)' }),
     el('div', { style: 'font-weight:600;margin-bottom:8px' }, 'Isi / Kurangi Saldo'),
     el('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' }, amtInput, noteInput, applyBtn),
