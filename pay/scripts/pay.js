@@ -75,27 +75,72 @@ async function api(path, opts) {
 async function createOrder(productId, qty) {
   root().innerHTML = `<div class="pay-card pay-center">
     <div class="pay-spinner"></div>
-    <h2>Menyiapkan pembayaran…</h2>
+    <h2>Memuat produk…</h2>
     <p class="muted">Mohon tunggu sebentar.</p>
-    <div class="pay-email" data-email-form hidden>
+  </div>`;
+
+  // Fetch product so we can show a quantity stepper + live subtotal.
+  let product = null;
+  try {
+    const pr = await api(`/products/id/${encodeURIComponent(productId)}`);
+    product = pr.data;
+  } catch (e) { /* fall back to qty-less flow below */ }
+
+  const maxStock = product ? Math.max(0, Number(product.stock_count) || 0) : 0;
+  const price = product ? Number(product.price) || 0 : 0;
+  const maxQty = Math.max(1, Math.min(99, maxStock || 99));
+  let q = Math.max(1, Math.min(maxQty, Number(qty) || 1));
+
+  const saved = localStorage.getItem('cs_guest_email') || '';
+  const soldOut = product && maxStock <= 0;
+
+  root().innerHTML = `<div class="pay-card">
+    ${product ? `
+    <div class="pay-prod">
+      ${product.image_url ? `<img class="pay-prod-img" src="${esc(product.image_url)}" alt="" onerror="this.style.display='none'"/>` : ''}
+      <div class="pay-prod-info">
+        <h2 class="pay-prod-name">${esc(product.name)}</h2>
+        <div class="pay-prod-price" data-unit>${rupiah(price)}</div>
+        <div class="pay-prod-stock muted">${soldOut ? 'Stok habis' : 'Stok tersedia: ' + maxStock}</div>
+      </div>
+    </div>
+    ${soldOut ? '' : `
+    <div class="pay-qty-row">
+      <span class="pay-qty-label">Jumlah</span>
+      <div class="pay-qty">
+        <button type="button" class="pay-qty-btn" data-dec aria-label="Kurangi">−</button>
+        <span class="pay-qty-val" data-qval>${q}</span>
+        <button type="button" class="pay-qty-btn" data-inc aria-label="Tambah">+</button>
+      </div>
+    </div>
+    <div class="pay-subtotal">Total <b data-subtotal>${rupiah(price * q)}</b></div>
+    `}` : '<h2>Hampir selesai</h2>'}
+    <div class="pay-email" data-email-form ${soldOut ? 'hidden' : ''}>
       <p>Masukkan email untuk menerima produk:</p>
-      <input type="email" placeholder="email@kamu.com" data-email />
+      <input type="email" placeholder="email@kamu.com" data-email value="${esc(saved)}" />
       <button class="btn btn-primary" data-email-submit>Lanjut ke Pembayaran</button>
       <div class="pay-err" data-err></div>
     </div>
+    ${soldOut ? '<a class="btn btn-primary pay-open" href="/">Belanja lagi →</a>' : ''}
   </div>`;
 
-  // Guest checkout needs an email. Ask inline (no separate checkout page).
-  const saved = localStorage.getItem('cs_guest_email') || '';
+  if (soldOut) return;
+
   const form = root().querySelector('[data-email-form]');
-  root().querySelector('.pay-spinner').style.display = 'none';
-  root().querySelector('h2').textContent = 'Hampir selesai';
-  root().querySelector('h2').nextElementSibling.remove();
-  form.hidden = false;
   const input = form.querySelector('[data-email]');
-  input.value = saved;
   const submit = form.querySelector('[data-email-submit]');
   const err = form.querySelector('[data-err]');
+  const qval = root().querySelector('[data-qval]');
+  const subEl = root().querySelector('[data-subtotal]');
+
+  function renderQty() {
+    if (qval) qval.textContent = q;
+    if (subEl) subEl.textContent = rupiah(price * q);
+  }
+  const dec = root().querySelector('[data-dec]');
+  const inc = root().querySelector('[data-inc]');
+  if (dec) dec.addEventListener('click', () => { q = Math.max(1, q - 1); renderQty(); });
+  if (inc) inc.addEventListener('click', () => { q = Math.min(maxQty, q + 1); renderQty(); });
 
   async function go() {
     const email = text(input.value);
@@ -107,7 +152,7 @@ async function createOrder(productId, qty) {
       const r = await api('/public/web-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, paymentMethod: 'qris', items: [{ productId, quantity: qty }], telegramInitData }),
+        body: JSON.stringify({ email, paymentMethod: 'qris', items: [{ productId, quantity: q }], telegramInitData }),
       });
       const d = r.data;
       if (d.qrisData) sessionStorage.setItem('cs_qris_' + d.orderId, d.qrisData);
