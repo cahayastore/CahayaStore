@@ -13,6 +13,7 @@ import { pageSettings } from './pages/settings.js';
 import { pageBroadcast } from './pages/broadcast.js';
 import { pageVouchers } from './pages/vouchers.js';
 import { pageUsers } from './pages/users.js';
+import { pageStockAlert } from './pages/stock-alert.js';
 import { pageTopupBonus } from './pages/topup-bonus.js';
 
 const ROUTES = {
@@ -28,6 +29,7 @@ const ROUTES = {
   '#/broadcast': pageBroadcast,
   '#/vouchers': pageVouchers,
   '#/users': pageUsers,
+  '#/stock-alert': pageStockAlert,
   '#/topup-bonus': pageTopupBonus
 };
 

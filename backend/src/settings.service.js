@@ -11,7 +11,8 @@ const KEYS = {
   ORDER_POLICY: 'order.policy',       // { expiry_minutes }
   BOT_INFO_TEXT: 'bot.info_text',     // { text: string } - Info text shown when user clicks Info button
   BOT_BANNER: 'bot.banner',           // { image_url, caption } - banner shown on /start
-  TOPUP_BONUS: 'topup.bonus'          // { enabled, tiers: [{ min, bonus }] } - free balance when top up >= min
+  TOPUP_BONUS: 'topup.bonus',         // { enabled, tiers: [{ min, bonus }] } - free balance when top up >= min
+  STOCK_ALERT: 'stock.alert'          // { enabled, template, imageUrl } - broadcast when stock added
 };
 
 async function getSetting(key) {

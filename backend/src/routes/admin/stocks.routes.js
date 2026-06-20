@@ -14,6 +14,48 @@ const { encryptString } = require('../../crypto');
 const router = express.Router();
 const CONTENT_TYPES = new Set(['file', 'credential', 'code', 'note']);
 
+/* Render a stock-alert template with simple {placeholders}. */
+function renderTemplate(tpl, vars) {
+  return String(tpl || '').replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+}
+
+/* Best-effort: when stock is added, broadcast a notice to all bot users if the
+   stock-alert feature is enabled in settings. Never blocks/breaks the request. */
+async function maybeBroadcastStockAdded(productId, addedCount) {
+  try {
+    const { getSetting, KEYS } = require('../../settings.service');
+    const cfg = await getSetting(KEYS.STOCK_ALERT);
+    if (!cfg || !cfg.enabled || !cfg.template) return;
+
+    const pr = await query(
+      `SELECT p.name, p.price,
+              count(s.id) FILTER (WHERE s.status='available') AS stock
+         FROM products p LEFT JOIN product_stocks s ON s.product_id = p.id
+        WHERE p.id = $1 GROUP BY p.id`,
+      [productId]
+    );
+    if (!pr.rows.length) return;
+    const p = pr.rows[0];
+    const rupiah = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+    const text = renderTemplate(cfg.template, {
+      produk: p.name,
+      nama: p.name,
+      harga: rupiah(p.price),
+      stok: String(p.stock),
+      jumlah: String(addedCount),
+    });
+
+    const broadcast = require('../../broadcast.service');
+    await broadcast.startJob({
+      text,
+      imageUrl: (cfg.imageUrl || '').trim() || null,
+      parseMode: 'HTML',
+    });
+  } catch (e) {
+    console.error('[stock alert broadcast]', e.message);
+  }
+}
+
 /* List */
 router.get('/products/:id/stocks', async (req, res) => {
   const r = await query(
@@ -88,6 +130,9 @@ router.post('/products/:id/stocks', async (req, res) => {
   }
 
   res.status(201).json({ success: true, count: inserted.length, data: inserted });
+
+  // Fire-and-forget: notify users that stock was added (if enabled).
+  maybeBroadcastStockAdded(productId, inserted.length);
 });
 
 /* Delete single stock (only if not sold) */
