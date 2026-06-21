@@ -292,7 +292,7 @@ async function renderPayment(orderNo, token) {
   const qris = root().querySelector('[data-qris]');
   if (qris) {
     const stored = sessionStorage.getItem('cs_qris_' + orderNo);
-    const brandedSrc = `${API}/public/web-checkout/qr/${encodeURIComponent(orderNo)}.png`;
+    const brandedSrc = `${API}/public/web-checkout/qr/${encodeURIComponent(orderNo)}`;
     const img = new Image();
     img.alt = 'QRIS';
     img.className = 'pay-qris-img';

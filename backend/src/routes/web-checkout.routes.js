@@ -402,10 +402,10 @@ router.get('/payment-gateways/status/:orderNo', async (req, res) => {
   });
 });
 
-/* GET /api/public/web-checkout/qr/:orderNo.png — branded QRIS card image for
+/* GET /api/public/web-checkout/qr/:orderNo — branded QRIS card image for
    the web payment page (same style as the bot). Returns a PNG. Public: the QR
    payload is already shown to the buyer; no credentials are exposed here. */
-router.get('/public/web-checkout/qr/:orderNo.png', async (req, res) => {
+router.get('/public/web-checkout/qr/:orderNo', async (req, res) => {
   try {
     const r = await query(
       `SELECT o.id, o.order_no, o.total_amount, o.payment_status,
