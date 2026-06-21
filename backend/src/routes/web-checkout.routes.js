@@ -620,3 +620,4 @@ router.post('/payment-gateways/webhook/myqris/payhook', payhookHandler);
 module.exports = router;
 module.exports.expireStaleOrders = expireStaleOrders;
 module.exports.deliverCredentialsToTelegram = deliverCredentialsToTelegram;
+module.exports.deliverOrder = deliverOrder;
