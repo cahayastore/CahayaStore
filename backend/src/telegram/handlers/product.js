@@ -107,6 +107,21 @@ function registerProductHandlers(bot, opts = {}) {
     if (!aw || !aw.productId) return typeof next === 'function' ? next() : undefined;
     const n = Math.max(1, parseInt(String(ctx.message.text).trim(), 10) || 1);
     ctx.session.awaitingQty = null;
+    // Soft warn if the requested amount exceeds available stock. We still open
+    // the detail (clamped to max) so the user can continue without retyping.
+    try {
+      const sr = await query(
+        "SELECT count(*)::int AS avail FROM product_stocks WHERE product_id = $1 AND status = 'available'",
+        [aw.productId]
+      );
+      const avail = sr.rows.length ? Number(sr.rows[0].avail) : 0;
+      const cap = Math.min(MAX_QTY, avail);
+      if (avail > 0 && n > cap) {
+        await replyClean(ctx,
+          `⚠️ Jumlah yang kamu masukkan (${n}) melebihi ketersediaan.\n` +
+          `Stok tersedia hanya <b>${avail}</b>. Jumlah disesuaikan ke <b>${cap}</b>.`);
+      }
+    } catch (e) { /* non-fatal: just show detail */ }
     return showProductDetail(ctx, aw.productId, n);
   });
 
