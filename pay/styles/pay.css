@@ -103,3 +103,17 @@
   .pay-qty-val { min-width: 34px; font-size: 15px; }
   .pay-subtotal b { font-size: 18px; }
 }
+
+/* ===== Multi-unit delivered credentials (qty>1) ===== */
+.pay-deliver-count { font-weight: 700; margin: 0 0 6px; }
+.pay-cred-item {
+  text-align: left;
+  border: 1px solid var(--cds-border, rgba(255,255,255,.14));
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 10px 0;
+}
+.pay-cred-item .pay-cred-label { margin-bottom: 6px; font-weight: 600; font-size: 13px; opacity: .85; }
+.pay-cred-item .pay-cred-box { margin-bottom: 8px; }
+.pay-cred-item .pay-pre { white-space: pre-wrap; word-break: break-word; }
+.pay-deliver { display: flex; flex-direction: column; gap: 2px; }
