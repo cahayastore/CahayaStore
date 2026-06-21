@@ -47,15 +47,13 @@ async function showProductDetail(ctx, productId, qty = 1) {
     '<b>Detail Pesanan Anda:</b>',
     '',
     `• <b>Produk</b> : ${escapeHtml(p.name)}`,
+    `• <b>Stok Terjual</b> : ${sold}`,
   ];
   if (p.description) {
-    lines.push(`• <b>Deskripsi</b> : ${escapeHtml(String(p.description).slice(0, 600))}`);
+    lines.push('', `• <b>Deskripsi</b> : ${escapeHtml(String(p.description).slice(0, 600))}`);
   }
-  lines.push(
-    `• <b>Stok Terjual</b> : ${sold}`,
-  );
   if (p.warranty_enabled) {
-    lines.push(`• <b>Garansi</b> : ${escapeHtml(p.warranty_label || 'Ada')}`);
+    lines.push('', `• <b>Garansi</b> : ${escapeHtml(p.warranty_label || 'Ada')}`);
   }
   lines.push(
     '',
