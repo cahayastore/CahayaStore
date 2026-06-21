@@ -369,39 +369,26 @@ async function renderOrder(orderNo, token) {
     return;
   }
 
-  // Render ALL delivered units (qty>1 supported). Falls back to the single
-  // `credentials` field for older orders that don't return an `items` array.
+  // Render ALL delivered units (qty>1 supported) as a compact descending list.
+  // Falls back to the single `credentials` field for older orders.
   const units = Array.isArray(data.items) && data.items.length
     ? data.items
     : (data.credentials ? [data.credentials] : []);
 
-  function unitHtml(c, idx, total) {
-    const label = total > 1 ? `#${idx + 1}` : '';
-    if (c.type === 'link') {
-      return `<div class="pay-cred-item">
-        <div class="pay-cred-label">Link Produk ${label}</div>
-        <a class="btn btn-primary pay-open" href="${esc(c.url)}" target="_blank" rel="noopener">Buka Link →</a>
-        <button class="btn btn-ghost" data-copy="${esc(c.url)}">Salin Link</button>
-      </div>`;
-    }
-    if (c.type === 'code') {
-      return `<div class="pay-cred-item">
-        <div class="pay-cred-label">Kode ${label}</div>
-        <div class="pay-cred-box">${esc(c.code || c.content)}</div>
-        <button class="btn btn-ghost" data-copy="${esc(c.code || c.content)}">Salin Kode</button>
-      </div>`;
-    }
-    if (c.type === 'account') {
-      return `<div class="pay-cred-item">
-        <div class="pay-cred-label">Detail Akun ${label}</div>
-        <pre class="pay-cred-box pay-pre">${esc(c.content)}</pre>
-        <button class="btn btn-ghost" data-copy="${esc(c.content)}">Salin</button>
-      </div>`;
-    }
-    return `<div class="pay-cred-item">
-      <div class="pay-cred-label">Detail Produk ${label}</div>
-      <pre class="pay-cred-box pay-pre">${esc(c.content)}</pre>
-      <button class="btn btn-ghost" data-copy="${esc(c.content)}">Salin</button>
+  const copyIcon = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+  function unitValue(c) { return c.url || c.code || c.content || ''; }
+
+  function unitRow(c, idx) {
+    const val = unitValue(c);
+    const isLink = c.type === 'link';
+    const main = isLink
+      ? `<a class="pay-cred-link" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.url)}</a>`
+      : `<span class="pay-cred-text">${esc(val)}</span>`;
+    return `<div class="pay-cred-row">
+      <span class="pay-cred-num">${idx + 1}.</span>
+      ${main}
+      <button class="pay-cred-copy" data-copy="${esc(val)}" title="Salin" aria-label="Salin">${copyIcon}</button>
     </div>`;
   }
 
@@ -411,19 +398,22 @@ async function renderOrder(orderNo, token) {
       <p>Pembayaran berhasil. Produk sedang diproses admin dan akan dikirim ke email <b>kamu</b>.</p>
     </div>`;
   } else {
-    // Build a "copy all" payload of every unit's content/url/code.
-    const allText = units.map((c) => c.url || c.code || c.content || '').filter(Boolean).join('\n');
-    const head = units.length > 1
-      ? `<p class="pay-deliver-count">${units.length} item terkirim:</p>
-         <button class="btn btn-ghost" data-copy="${esc(allText)}">Salin Semua (${units.length})</button>`
-      : '';
-    body = `<div class="pay-deliver">${head}${units.map((c, i) => unitHtml(c, i, units.length)).join('')}</div>`;
+    const allText = units.map(unitValue).filter(Boolean).join('\n');
+    body = `<div class="pay-deliver">
+      <div class="pay-cred-head">
+        <span class="pay-cred-title">${units.length} akun diterima</span>
+        <button class="pay-copyall" data-copy="${esc(allText)}">${copyIcon}<span>Salin Semua</span></button>
+      </div>
+      <div class="pay-cred-list">${units.map((c, i) => unitRow(c, i)).join('')}</div>
+    </div>`;
   }
 
-  root().innerHTML = `<div class="pay-card pay-center">
-    <div class="pay-badge ok">✓ Pembayaran berhasil</div>
-    <h2>${esc(data.productName || 'Produk kamu')}</h2>
-    <p class="muted">Order ${esc(orderNo)}</p>
+  root().innerHTML = `<div class="pay-card">
+    <div class="pay-card-center">
+      <div class="pay-badge ok">✓ Pembayaran berhasil</div>
+      <h2>${esc(data.productName || 'Produk kamu')}</h2>
+      <p class="muted">Order ${esc(orderNo)}</p>
+    </div>
     ${body}
     ${setPasswordPanel()}
     <div class="pay-account-links">
@@ -434,8 +424,13 @@ async function renderOrder(orderNo, token) {
 
   root().querySelectorAll('[data-copy]').forEach((b) => {
     b.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Tersalin ✓'; }
-      catch { /* */ }
+      try {
+        await navigator.clipboard.writeText(b.dataset.copy);
+        b.classList.add('is-copied');
+        const label = b.querySelector('span');
+        if (label) { const t = label.textContent; label.textContent = 'Tersalin ✓'; setTimeout(() => { label.textContent = t; b.classList.remove('is-copied'); }, 1500); }
+        else { b.classList.add('is-copied'); setTimeout(() => b.classList.remove('is-copied'), 1200); }
+      } catch { /* */ }
     });
   });
   bindSetPassword();

@@ -135,3 +135,55 @@
 .pay-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .pay-qty-hint { font-size: 12px; margin: 4px 0 0; }
 .pay-qty-hint--warn { color: #f59e0b; font-weight: 600; }
+
+/* ===== Delivered credentials — compact descending list ===== */
+.pay-card-center { text-align: center; }
+.pay-deliver { text-align: left; margin: 18px 0; }
+.pay-cred-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 10px;
+}
+.pay-cred-title { font-weight: 700; font-size: 14px; }
+.pay-copyall {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--cds-primary, #2563eb); color: #fff;
+  border: none; border-radius: 8px; padding: 7px 12px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: filter .15s ease;
+}
+.pay-copyall:hover { filter: brightness(1.08); }
+.pay-copyall.is-copied { background: #16a34a; }
+
+.pay-cred-list {
+  border: 1px solid var(--cds-border, rgba(255,255,255,.14));
+  border-radius: 12px; overflow: hidden;
+}
+.pay-cred-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--cds-border, rgba(255,255,255,.10));
+}
+.pay-cred-row:first-child { border-top: none; }
+.pay-cred-num { color: var(--cds-muted, #94a3b8); font-size: 12px; min-width: 22px; flex: 0 0 auto; }
+.pay-cred-text, .pay-cred-link {
+  flex: 1; min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13.5px; word-break: break-all; white-space: pre-wrap;
+}
+.pay-cred-link { color: var(--cds-primary, #60a5fa); text-decoration: none; }
+.pay-cred-link:hover { text-decoration: underline; }
+.pay-cred-copy {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px;
+  background: transparent; color: var(--cds-muted, #94a3b8);
+  border: 1px solid var(--cds-border, rgba(255,255,255,.16)); cursor: pointer;
+  transition: all .15s ease;
+}
+.pay-cred-copy:hover { color: #fff; border-color: var(--cds-primary, #2563eb); background: rgba(37,99,235,.18); }
+.pay-cred-copy.is-copied { color: #16a34a; border-color: #16a34a; }
+
+@media (max-width: 480px) {
+  .pay-cred-head { flex-wrap: wrap; }
+  .pay-cred-text, .pay-cred-link { font-size: 13px; }
+  .pay-cred-copy { width: 30px; height: 30px; }
+}
