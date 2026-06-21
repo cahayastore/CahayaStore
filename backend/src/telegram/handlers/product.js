@@ -67,9 +67,11 @@ async function showProductDetail(ctx, productId, qty = 1) {
   const soldOut = avail <= 0;
   const kb = new InlineKeyboard();
   if (!soldOut) {
-    kb.text('➖', `v3:p:${productId}:${Math.max(1, q - 1)}`)
+    const decCb = q <= 1 ? `v3:pmin:${productId}` : `v3:p:${productId}:${q - 1}`;
+    const incCb = q >= maxQty ? `v3:pmax:${productId}:${maxQty}` : `v3:p:${productId}:${q + 1}`;
+    kb.text('➖', decCb)
       .text('📝', `v3:qin:${productId}:${q}`)
-      .text('➕', `v3:p:${productId}:${Math.min(maxQty, q + 1)}`).row()
+      .text('➕', incCb).row()
       .text('💰 Buy (Saldo)', `v3:saldo:${productId}:${q}`)
       .text('💳 Buy (Qris)', `v3:order:${productId}:${q}`).row();
   } else {
@@ -140,6 +142,13 @@ function registerProductHandlers(bot, opts = {}) {
   bot.callbackQuery(/^v3:p:([^:]+)(?::(\d+))?$/, async (ctx) => {
     await ctx.answerCallbackQuery();
     return showProductDetail(ctx, ctx.match[1], ctx.match[2] ? Number(ctx.match[2]) : 1);
+  });
+  // Quantity at max/min — warn the user via a popup alert (no re-render needed).
+  bot.callbackQuery(/^v3:pmax:([^:]+):(\d+)$/, async (ctx) => {
+    try { await ctx.answerCallbackQuery({ text: `⚠️ Maksimal ${ctx.match[2]} item (sesuai stok tersedia).`, show_alert: true }); } catch {}
+  });
+  bot.callbackQuery(/^v3:pmin:([^:]+)$/, async (ctx) => {
+    try { await ctx.answerCallbackQuery({ text: '⚠️ Jumlah minimal 1 item.', show_alert: true }); } catch {}
   });
   bot.callbackQuery(/^prod:(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();

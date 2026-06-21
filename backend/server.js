@@ -52,6 +52,9 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(compression({ level: 3, threshold: 1024 }));
 app.use(morgan('combined'));
 
+// Rate limiters for abuse-prone endpoints.
+const { authLimiter, checkoutLimiter, pollLimiter, uploadLimiter } = require('./src/rate-limit');
+
 app.get('/', (_req, res) => res.json({ service: 'cahayastore-api', status: 'ok' }));
 
 app.get('/health', (_req, res) => {
@@ -65,8 +68,11 @@ app.get('/health', (_req, res) => {
 });
 
 // Mount routes
-app.use('/api/auth', require('./src/routes/auth.routes'));
+app.use('/api/auth', authLimiter, require('./src/routes/auth.routes'));
 app.use('/api', require('./src/routes/public.routes'));
+app.use(['/api/public/web-checkout', '/api/checkout', '/api/orders'], checkoutLimiter);
+app.use(['/api/payment-gateways/status', '/api/public/web-checkout/credentials'], pollLimiter);
+app.use('/api/admin/uploads', uploadLimiter);
 app.use('/api', require('./src/routes/checkout.routes'));
 const webCheckout = require('./src/routes/web-checkout.routes');
 app.use('/api', webCheckout);
