@@ -15,21 +15,36 @@ const router = express.Router();
 // Deliver stock for a paid order (assign one available item per order item).
 async function deliverOrder(client, orderId) {
   const oi = await client.query(
-    "SELECT id, product_id FROM order_items WHERE order_id = $1",
+    "SELECT id, product_id, quantity FROM order_items WHERE order_id = $1",
     [orderId]
   );
   for (const item of oi.rows) {
-    const stock = await client.query(
-      `SELECT id FROM product_stocks
-        WHERE product_id = $1 AND status = 'available'
-        ORDER BY created_at ASC
-        LIMIT 1 FOR UPDATE SKIP LOCKED`,
-      [item.product_id]
-    );
-    if (stock.rows.length) {
-      const stockId = stock.rows[0].id;
-      await client.query("UPDATE product_stocks SET status='sold', sold_at=now() WHERE id = $1", [stockId]);
-      await client.query("UPDATE order_items SET delivered_stock_id = $2 WHERE id = $1", [item.id, stockId]);
+    const qty = Math.max(1, Number(item.quantity) || 1);
+    for (let n = 0; n < qty; n += 1) {
+      // Prefer stock reserved for this exact order, then any available unit.
+      let stock = await client.query(
+        `SELECT id FROM product_stocks
+          WHERE product_id = $1 AND reserved_order_id = $2 AND status IN ('available','reserved')
+          ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`,
+        [item.product_id, orderId]
+      );
+      if (!stock.rows.length) {
+        stock = await client.query(
+          `SELECT id FROM product_stocks
+            WHERE product_id = $1 AND status = 'available'
+              AND (reserved_until IS NULL OR reserved_until < now() OR reserved_order_id = $2)
+            ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`,
+          [item.product_id, orderId]
+        );
+      }
+      if (stock.rows.length) {
+        const stockId = stock.rows[0].id;
+        await client.query(
+          "UPDATE product_stocks SET status='sold', sold_at=now(), reserved_until=NULL, reserved_order_id=NULL, sold_order_id=$2 WHERE id = $1",
+          [stockId, orderId]
+        );
+        await client.query("UPDATE order_items SET delivered_stock_id = $2 WHERE id = $1", [item.id, stockId]);
+      }
     }
   }
   await client.query(
