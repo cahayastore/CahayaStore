@@ -41,21 +41,34 @@ async function fetchProductsPage(page) {
 }
 
 function buildListText({ products, page, totalPages }) {
-  // Rich-text style: product list inside an EXPANDABLE blockquote so a long
-  // catalog stays tidy and collapsible on /start. Requires parse_mode 'HTML'.
-  const rows = products.map((p) => `• ${escapeHtml(compactName(p.name, 40))}`);
+  // Table-style list rendered in a monospace <pre> block so columns line up
+  // like a real table (No │ Produk │ Harga). Requires parse_mode 'HTML'.
   const d = new Date(Date.now() + 7 * 60 * 60 * 1000);
   const pad = (n) => String(n).padStart(2, '0');
   const time = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  const rupiahShort = (v) => {
+    const n = Number(v) || 0;
+    if (n >= 1000000 && n % 1000000 === 0) return (n / 1000000) + 'jt';
+    if (n >= 1000 && n % 1000 === 0) return (n / 1000) + 'rb';
+    return n.toLocaleString('id-ID');
+  };
 
   const lines = ['🛍️ <b>LIST PRODUCT</b>', ''];
   if (products.length) {
-    // Expandable blockquote: collapsed by default, tap to expand the full list.
-    lines.push(
-      `<blockquote expandable>${rows.join('\n')}</blockquote>`,
-      '',
-      '<i>Tekan nama produk di bawah untuk melihat detail.</i>'
+    const NAME_W = 18; // product name column width
+    const cut = (s) => {
+      const t = String(s || '').replace(/\s+/g, ' ').trim();
+      return t.length > NAME_W ? t.slice(0, NAME_W - 1) + '…' : t.padEnd(NAME_W, ' ');
+    };
+    const priceW = Math.max(5, ...products.map((p) => rupiahShort(p.price).length));
+    const head = `No │ ${'Produk'.padEnd(NAME_W)} │ Harga`;
+    const sep = `${'─'.repeat(2)}─┼─${'─'.repeat(NAME_W)}─┼─${'─'.repeat(priceW)}`;
+    const body = products.map((p, i) =>
+      `${String(i + 1).padStart(2, ' ')} │ ${cut(p.name)} │ ${rupiahShort(p.price).padStart(priceW, ' ')}`
     );
+    const table = [head, sep, ...body].join('\n');
+    // escapeHtml inside <pre> so names with < > & don't break parsing.
+    lines.push(`<pre>${escapeHtml(table)}</pre>`, '', '<i>Tekan nama produk di bawah untuk melihat detail.</i>');
   } else {
     lines.push('Produk sedang kosong.');
   }
