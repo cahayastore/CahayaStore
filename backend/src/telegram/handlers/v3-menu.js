@@ -2,12 +2,17 @@
 /* v3 product menu — Marketku V2 style.
    Product list uses a CUSTOM (reply) keyboard: top menu row + numbered
    product buttons (5 cols) + pagination + utility rows. Pressing a number
-   opens the product detail (mapped via session). */
+   opens the product detail (mapped via session).
+
+   The product LIST is rendered as a REAL bordered table via Rich Messages
+   (sendRichMessage, Bot API 10.1+). If that is unavailable, it falls back
+   to a monospace <pre> table sent through replyClean. */
 const { InlineKeyboard, Keyboard } = require('grammy');
 const { query } = require('../../db');
 const { escapeHtml, rupiah } = require('./_shared');
 const { replyClean, editOrReply } = require('./_reply');
 const { getSetting, KEYS } = require('../../settings.service');
+const { sendRichTable } = require('./_rich');
 
 const PAGE_SIZE = 15;
 const NUM_COLUMNS = 6;
@@ -22,6 +27,19 @@ function wibStamp() {
   const p = (n) => String(n).padStart(2, '0');
   const mon = d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
   return `${p(d.getUTCDate())} ${mon} ${String(d.getUTCFullYear()).slice(-2)} - ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())} WIB`;
+}
+
+function wibTime() {
+  const d = new Date(Date.now() + 7 * 60 * 60 * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+}
+
+function rupiahShort(v) {
+  const n = Number(v) || 0;
+  if (n >= 1000000 && n % 1000000 === 0) return (n / 1000000) + 'jt';
+  if (n >= 1000 && n % 1000 === 0) return (n / 1000) + 'rb';
+  return n.toLocaleString('id-ID');
 }
 
 async function fetchProductsPage(page) {
@@ -41,18 +59,8 @@ async function fetchProductsPage(page) {
 }
 
 function buildListText({ products, page, totalPages }) {
-  // Table-style list rendered in a monospace <pre> block so columns line up
-  // like a real table (No │ Produk │ Harga). Requires parse_mode 'HTML'.
-  const d = new Date(Date.now() + 7 * 60 * 60 * 1000);
-  const pad = (n) => String(n).padStart(2, '0');
-  const time = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
-  const rupiahShort = (v) => {
-    const n = Number(v) || 0;
-    if (n >= 1000000 && n % 1000000 === 0) return (n / 1000000) + 'jt';
-    if (n >= 1000 && n % 1000 === 0) return (n / 1000) + 'rb';
-    return n.toLocaleString('id-ID');
-  };
-
+  // Fallback layout: table rendered in a monospace <pre> block so columns line
+  // up like a real table (No │ Produk │ Harga). Requires parse_mode 'HTML'.
   const lines = ['🛍️ <b>LIST PRODUCT</b>', ''];
   if (products.length) {
     const NAME_W = 18; // product name column width
@@ -72,7 +80,7 @@ function buildListText({ products, page, totalPages }) {
   } else {
     lines.push('Produk sedang kosong.');
   }
-  lines.push('', `📄 Halaman ${page + 1} / ${totalPages}`, `📆 ${time} WIB`);
+  lines.push('', `📄 Halaman ${page + 1} / ${totalPages}`, `📆 ${wibTime()} WIB`);
   return lines.join('\n');
 }
 
@@ -109,6 +117,16 @@ function buildListReplyKeyboard({ products, page, totalPages }) {
   return kb.resized().persistent();
 }
 
+/* Try to render the product list as a REAL bordered table via Rich Messages.
+   Returns the sent Message on success, or null so the caller can fall back. */
+async function tryRichProductList(ctx, { products, page, totalPages, reply_markup }) {
+  if (!products.length) return null;
+  const columns = ['No', 'Produk', 'Harga'];
+  const rows = products.map((p, i) => [String(i + 1), compactName(p.name, 28), rupiah(p.price)]);
+  const footer = `Halaman ${page + 1}/${totalPages} • ${wibTime()} WIB • Tekan nama produk di bawah untuk detail.`;
+  return sendRichTable(ctx, { title: '🛍️ LIST PRODUCT', columns, rows, footer, reply_markup });
+}
+
 async function showProductList(ctx, page = 0, opts = {}) {
   const { withBanner = false } = (typeof opts === 'object' && opts) || {};
   const { products, total } = await fetchProductsPage(page);
@@ -124,6 +142,21 @@ async function showProductList(ctx, page = 0, opts = {}) {
   ctx.session.listTotalPages = totalPages;
 
   const reply_markup = buildListReplyKeyboard({ products, page, totalPages });
+
+  // Preferred: render a real bordered table (Rich Messages). On any failure
+  // (older Bot API, network), fall back to the <pre> table below.
+  try {
+    const sent = await tryRichProductList(ctx, { products, page, totalPages, reply_markup });
+    if (sent) {
+      // Track as the current screen so replyClean can delete it next time.
+      try {
+        const prev = ctx.session.lastBotMsgId;
+        if (prev && ctx.chat) { ctx.api.deleteMessage(ctx.chat.id, prev).catch(() => {}); }
+      } catch (e) { /* ignore */ }
+      ctx.session.lastBotMsgId = sent.message_id;
+      return sent;
+    }
+  } catch (e) { console.error('[v3 rich list]', e.message); }
 
   // On the first screen (e.g. /start), merge the banner + list into ONE message:
   // the banner is the photo and the product list is its caption. Caption max is
