@@ -139,19 +139,35 @@ export async function pageUsers() {
     el('div', { id: 'us' }, el('p', { class: 'muted' }, 'Memuat...'))
   );
 
-  const search = el('input', { type: 'search', placeholder: 'Cari nama / email / @username / telegram id…', style: 'width:100%;max-width:420px' });
+  const channelLabel = (c) => {
+    const map = { web: '🌐 Web', miniapp: '📱 Mini App', telegram: '✈️ Telegram' };
+    return map[String(c || '').toLowerCase()] || '—';
+  };
+
+  const search = el('input', { type: 'search', placeholder: 'Cari nama / email / @username / telegram id…', style: 'flex:1;min-width:220px;max-width:420px' });
+  const channelSel = el('select', { style: 'padding:8px 10px;border-radius:8px' },
+    el('option', { value: '' }, 'Semua Channel'),
+    el('option', { value: 'web' }, '🌐 Web'),
+    el('option', { value: 'miniapp' }, '📱 Mini App'),
+    el('option', { value: 'telegram' }, '✈️ Telegram'),
+  );
+
+  const PAGE = 20;
+  let offset = 0;
   let timer = null;
 
   async function load() {
     const container = $('#us', wrap);
     try {
       const q = search.value.trim();
-      const r = await api(`/api/admin/users?q=${encodeURIComponent(q)}&limit=50`);
+      const ch = channelSel.value;
+      const r = await api(`/api/admin/users?q=${encodeURIComponent(q)}&channel=${encodeURIComponent(ch)}&limit=${PAGE}&offset=${offset}`);
       const rows = r.data;
+      const total = r.total || 0;
 
       const tb = el('tbody');
       if (!rows.length) {
-        tb.appendChild(el('tr', {}, el('td', { colspan: '5', class: 'muted', style: 'text-align:center;padding:24px' }, 'Tidak ada user.')));
+        tb.appendChild(el('tr', {}, el('td', { colspan: '6', class: 'muted', style: 'text-align:center;padding:24px' }, 'Tidak ada user.')));
       } else {
         for (const u of rows) {
           const openBtn = el('button', { class: 'btn ghost small', type: 'button' }, 'Detail');
@@ -159,6 +175,7 @@ export async function pageUsers() {
           tb.appendChild(el('tr', {},
             el('td', {}, userName(u) + (u.is_active ? '' : ' 🚫')),
             el('td', {}, u.email || '—'),
+            el('td', {}, channelLabel(u.channel)),
             el('td', {}, formatIDR(u.balance)),
             el('td', {}, formatIDR(u.spend)),
             el('td', { style: 'white-space:nowrap' }, openBtn)
@@ -167,22 +184,39 @@ export async function pageUsers() {
       }
       const table = el('table', { class: 'table' },
         el('thead', {}, el('tr', {},
-          el('th', {}, 'User'), el('th', {}, 'Email'), el('th', {}, 'Saldo'), el('th', {}, 'Total Belanja'), el('th', {}, 'Aksi')
+          el('th', {}, 'User'), el('th', {}, 'Email'), el('th', {}, 'Channel'), el('th', {}, 'Saldo'), el('th', {}, 'Total Belanja'), el('th', {}, 'Aksi')
         )),
         tb
       );
 
+      // Pagination controls.
+      const from = total ? offset + 1 : 0;
+      const to = Math.min(offset + PAGE, total);
+      const prevBtn = el('button', { class: 'btn ghost small', type: 'button' }, '← Sebelumnya');
+      const nextBtn = el('button', { class: 'btn ghost small', type: 'button' }, 'Berikutnya →');
+      prevBtn.disabled = offset <= 0;
+      nextBtn.disabled = offset + PAGE >= total;
+      prevBtn.addEventListener('click', () => { offset = Math.max(0, offset - PAGE); load(); });
+      nextBtn.addEventListener('click', () => { if (offset + PAGE < total) { offset += PAGE; load(); } });
+      const pager = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;flex-wrap:wrap' },
+        el('span', { class: 'muted' }, total ? `Menampilkan ${from}–${to} dari ${total} user` : '0 user'),
+        el('div', { style: 'display:flex;gap:8px' }, prevBtn, nextBtn)
+      );
+
       container.innerHTML = '';
-      container.appendChild(el('div', { style: 'margin-bottom:14px' }, search));
-      container.appendChild(el('p', { class: 'muted', style: 'margin:0 0 10px' }, `${rows.length} user${r.total > rows.length ? ' (dari ' + r.total + ')' : ''}`));
+      const bar = el('div', { style: 'display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap' }, search, channelSel);
+      container.appendChild(bar);
       container.appendChild(table);
+      container.appendChild(pager);
     } catch (e) {
       container.innerHTML = '';
       container.appendChild(alertBox('err', e.message));
     }
   }
 
-  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 350); });
+  // Search + filter reset to page 1.
+  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { offset = 0; load(); }, 350); });
+  channelSel.addEventListener('change', () => { offset = 0; load(); });
   await load();
   return shell(wrap);
 }

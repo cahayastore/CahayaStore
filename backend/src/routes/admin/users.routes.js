@@ -10,30 +10,39 @@ const wallet = require('../../wallet.service');
 
 const router = express.Router();
 
-/* GET /api/admin/users?q=&limit=&offset=  — search + list. */
+/* GET /api/admin/users?q=&channel=&limit=&offset=  — search + filter + list. */
 router.get('/users', async (req, res) => {
   try {
     const q = String(req.query.q || '').trim();
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const channel = String(req.query.channel || '').trim().toLowerCase();
+    const validChannels = ['web', 'miniapp', 'telegram'];
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const offset = Math.max(0, Number(req.query.offset) || 0);
 
-    // Build the shared WHERE clause (search) once.
-    const searchParams = [];
+    // Per-user channel = the channel of their most recent order.
+    const lastChannel = `(SELECT o.channel FROM orders o WHERE o.user_id = u.id ORDER BY o.created_at DESC LIMIT 1)`;
+
+    const params = [];
     let where = "WHERE u.role = 'buyer'";
     if (q) {
-      searchParams.push('%' + q + '%');
-      where += ` AND (u.name ILIKE $1 OR u.email ILIKE $1
-                  OR u.telegram_username ILIKE $1 OR CAST(u.telegram_id AS TEXT) ILIKE $1)`;
+      params.push('%' + q + '%');
+      where += ` AND (u.name ILIKE $${params.length} OR u.email ILIKE $${params.length}
+                  OR u.telegram_username ILIKE $${params.length} OR CAST(u.telegram_id AS TEXT) ILIKE $${params.length})`;
+    }
+    if (validChannels.includes(channel)) {
+      params.push(channel);
+      where += ` AND ${lastChannel} = $${params.length}`;
     }
 
-    const listParams = searchParams.slice();
+    const listParams = params.slice();
     listParams.push(limit); const lp = listParams.length;
     listParams.push(offset); const op = listParams.length;
     const r = await query(
       `SELECT u.id, u.name, u.email, u.telegram_id, u.telegram_username, u.is_active, u.created_at,
               COALESCE(w.balance, 0) AS balance,
               COALESCE((SELECT SUM(o.total_amount) FROM orders o
-                         WHERE o.user_id = u.id AND o.payment_status = 'paid' AND o.order_kind = 'product'), 0) AS spend
+                         WHERE o.user_id = u.id AND o.payment_status = 'paid' AND o.order_kind = 'product'), 0) AS spend,
+              ${lastChannel} AS channel
          FROM users u
          LEFT JOIN wallet_accounts w ON w.user_id = u.id
          ${where}
@@ -41,8 +50,8 @@ router.get('/users', async (req, res) => {
          LIMIT $${lp} OFFSET $${op}`,
       listParams
     );
-    const c = await query(`SELECT count(*)::int AS n FROM users u ${where}`, searchParams);
-    res.json({ success: true, data: r.rows, total: c.rows[0].n });
+    const c = await query(`SELECT count(*)::int AS n FROM users u ${where}`, params);
+    res.json({ success: true, data: r.rows, total: c.rows[0].n, limit, offset });
   } catch (e) {
     console.error('[users list]', e);
     res.status(500).json({ success: false, message: 'Gagal memuat user.' });
