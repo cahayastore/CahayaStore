@@ -9,14 +9,14 @@
    something plain sendMessage(parse_mode:'HTML') cannot do.
 
    Usage:
-     const { sendRichTable } = require('./_rich');
-     const sent = await sendRichTable(ctx, {
+     const { sendRichTable, sendRichMessage } = require('./_rich');
+     const ok = await sendRichTable(ctx, {
        title: 'LIST PRODUCT',
        columns: ['No', 'Produk', 'Harga'],
        rows: products.map((p, i) => [String(i+1), p.name, rupiah(p.price)]),
        reply_markup,
      });
-     if (!sent) { ...fall back to <pre> table... }
+     if (!ok) { ...fall back to <pre> table... }
    ════════════════════════════════════════════════════════════════════ */
 
 const API_BASE = 'https://api.telegram.org';
@@ -38,11 +38,17 @@ async function sendRichMessage(ctx, html, opts = {}) {
   const chatId = ctx && ctx.chat && ctx.chat.id;
   if (!token || !chatId || !html) return null;
 
-  const body = { chat_id: String(chatId), rich_message: { html } };
+  const body = {
+    chat_id: String(chatId),
+    rich_message: { html },
+  };
   if (opts.reply_markup) {
-    body.reply_markup = typeof opts.reply_markup.build === 'function'
-      ? opts.reply_markup.build()
-      : opts.reply_markup;
+    // grammY Keyboard/InlineKeyboard instances already expose the correct
+    // shape (keyboard/inline_keyboard + resize/persistent flags) as own
+    // enumerable props, so they serialize to a valid ReplyKeyboardMarkup as-is.
+    // NOTE: do NOT call .build() — that returns ONLY the button matrix
+    // ([[...]]), which Telegram rejects, causing a silent fallback.
+    body.reply_markup = opts.reply_markup;
   }
   if (opts.disable_notification) body.disable_notification = true;
 
