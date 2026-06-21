@@ -135,7 +135,7 @@ function renderStep1() {
         <span class="tma-qty-val" data-qty-val>${state.qty}</span>
         <button type="button" class="tma-qty-btn" data-qty-inc aria-label="Tambah" ${outOfStock || state.qty >= maxQty ? 'disabled' : ''}>+</button>
       </div>
-      <p class="tma-co-hint" data-stock-hint>${outOfStock ? 'Stok habis — produk tidak tersedia.' : `Stok tersedia: ${stock}. Maksimal ${maxQty} item per checkout.`}</p>
+      <p class="tma-co-hint" data-stock-hint>${outOfStock ? 'Stok habis — produk tidak tersedia.' : `Maksimal ${maxQty} item per checkout.`}</p>
     </div>
 
     <div class="tma-co-field">

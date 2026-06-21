@@ -79,7 +79,7 @@ function render(product) {
     : `<div class="pd-initial">${esc(initial(product.name))}</div>`;
 
   const stockHtml = stock > 0
-    ? `<div class="pd-stock ok">✓ Stok tersedia (${stock})</div>`
+    ? `<div class="pd-stock ok">✓ Stok tersedia</div>`
     : `<div class="pd-stock out">Stok kosong saat ini</div>`;
 
   wrap.innerHTML = `
