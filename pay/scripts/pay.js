@@ -415,7 +415,6 @@ async function renderOrder(orderNo, token) {
       <p class="muted">Order ${esc(orderNo)}</p>
     </div>
     ${body}
-    ${setPasswordPanel()}
     <div class="pay-account-links">
       <a href="/riwayat">Riwayat belanja saya →</a>
     </div>
@@ -433,29 +432,45 @@ async function renderOrder(orderNo, token) {
       } catch { /* */ }
     });
   });
-  bindSetPassword();
+
+  // Show the "secure your account" panel as a centered overlay (not buried at
+  // the bottom), so the buyer actually notices it. Slight delay so they first
+  // see the credentials.
+  setTimeout(showSetPasswordOverlay, 900);
 }
 
-/* Set-password panel: only for passwordless accounts (we have an accessToken). */
-function setPasswordPanel() {
+/* Set-password overlay: only for passwordless accounts (we have an accessToken).
+   Shown as a centered modal so the buyer notices it. */
+function showSetPasswordOverlay() {
   const s = getSession();
-  if (!s.accessToken || s.passwordSet) return '';
-  return `<div class="pay-setpw" data-setpw>
-    <div class="pay-cred-label">Amankan akun kamu</div>
-    <p class="pay-hint" style="margin:4px 0 10px">Buat password agar bisa login & lihat riwayat belanja dari perangkat mana pun.</p>
-    <input type="password" placeholder="Password baru (min 8)" data-pw />
-    <button class="btn btn-primary" data-pw-save>Simpan Password</button>
-    <div class="pay-err" data-pw-msg></div>
-  </div>`;
-}
+  if (!s.accessToken || s.passwordSet) return;
+  if (document.querySelector('[data-setpw-overlay]')) return;
 
-function bindSetPassword() {
-  const wrap = root().querySelector('[data-setpw]');
-  if (!wrap) return;
-  const input = wrap.querySelector('[data-pw]');
-  const btn = wrap.querySelector('[data-pw-save]');
-  const msg = wrap.querySelector('[data-pw-msg]');
-  btn.addEventListener('click', async () => {
+  const overlay = document.createElement('div');
+  overlay.className = 'pay-modal-bg';
+  overlay.setAttribute('data-setpw-overlay', '');
+  overlay.innerHTML = `
+    <div class="pay-modal" data-setpw>
+      <button class="pay-modal-close" data-pw-close aria-label="Tutup">✕</button>
+      <div class="pay-modal-icon">🔒</div>
+      <h3>Amankan Akun Kamu</h3>
+      <p class="pay-hint" style="margin:4px 0 14px">Buat password agar bisa login & lihat riwayat belanja dari perangkat mana pun.</p>
+      <input type="password" placeholder="Password baru (min 8)" data-pw />
+      <button class="btn btn-primary" data-pw-save style="width:100%;margin-top:10px">Simpan Password</button>
+      <div class="pay-err" data-pw-msg></div>
+      <button class="pay-modal-skip" data-pw-skip>Nanti saja</button>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('[data-pw-close]').addEventListener('click', close);
+  overlay.querySelector('[data-pw-skip]').addEventListener('click', close);
+
+  const input = overlay.querySelector('[data-pw]');
+  const btn = overlay.querySelector('[data-pw-save]');
+  const msg = overlay.querySelector('[data-pw-msg]');
+  const submit = async () => {
     const pw = String(input.value || '');
     if (pw.length < 8) { msg.textContent = 'Password minimal 8 karakter.'; return; }
     btn.disabled = true; btn.textContent = 'Menyimpan…'; msg.textContent = '';
@@ -467,12 +482,19 @@ function bindSetPassword() {
       });
       const sess = getSession(); sess.passwordSet = true;
       localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
-      wrap.innerHTML = '<div class="pay-badge ok">✓ Password tersimpan</div><p class="pay-hint" style="margin-top:8px">Sekarang kamu bisa login dengan email & password.</p>';
+      overlay.querySelector('.pay-modal').innerHTML =
+        '<div class="pay-modal-icon">✅</div><h3>Password tersimpan</h3>' +
+        '<p class="pay-hint" style="margin-top:6px">Sekarang kamu bisa login dengan email & password.</p>' +
+        '<button class="btn btn-primary" data-pw-done style="width:100%;margin-top:12px">Selesai</button>';
+      overlay.querySelector('[data-pw-done]').addEventListener('click', close);
     } catch (e) {
       msg.textContent = e.message;
       btn.disabled = false; btn.textContent = 'Simpan Password';
     }
-  });
+  };
+  btn.addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+  setTimeout(() => { try { input.focus(); } catch {} }, 100);
 }
 
 /* ── Order history (owner-only) ─────────────────────── */
