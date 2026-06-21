@@ -41,14 +41,21 @@ async function fetchProductsPage(page) {
 }
 
 function buildListText({ products, page, totalPages }) {
-  // Clean style: "LIST PRODUCT" + "• Name" (stock hidden from users).
+  // Rich-text style: product list inside an EXPANDABLE blockquote so a long
+  // catalog stays tidy and collapsible on /start. Requires parse_mode 'HTML'.
   const rows = products.map((p) => `• ${escapeHtml(compactName(p.name, 40))}`);
   const d = new Date(Date.now() + 7 * 60 * 60 * 1000);
   const pad = (n) => String(n).padStart(2, '0');
   const time = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
-  const lines = ['LIST PRODUCT', ''];
+
+  const lines = ['🛍️ <b>LIST PRODUCT</b>', ''];
   if (products.length) {
-    lines.push(...rows, '', 'Tekan nama produk di bawah untuk melihat detail.');
+    // Expandable blockquote: collapsed by default, tap to expand the full list.
+    lines.push(
+      `<blockquote expandable>${rows.join('\n')}</blockquote>`,
+      '',
+      '<i>Tekan nama produk di bawah untuk melihat detail.</i>'
+    );
   } else {
     lines.push('Produk sedang kosong.');
   }
