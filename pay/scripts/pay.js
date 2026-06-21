@@ -101,7 +101,7 @@ async function createOrder(productId, qty) {
       <div class="pay-prod-info">
         <h2 class="pay-prod-name">${esc(product.name)}</h2>
         <div class="pay-prod-price" data-unit>${rupiah(price)}</div>
-        <div class="pay-prod-stock muted">${soldOut ? 'Stok habis' : 'Stok tersedia: ' + maxStock}</div>
+        <div class="pay-prod-stock muted">${soldOut ? 'Stok habis' : 'Tersedia'}</div>
       </div>
     </div>
     ${soldOut ? '' : `

@@ -52,9 +52,7 @@ async function showProductDetail(ctx, productId, qty = 1) {
     lines.push(`• <b>Deskripsi</b> : ${escapeHtml(String(p.description).slice(0, 600))}`);
   }
   lines.push(
-    `• <b>Sisa Stok</b> : ${stockLabel(avail)}`,
     `• <b>Stok Terjual</b> : ${sold}`,
-    `• <b>Total Stok</b> : ${stockLabel(total)}`,
   );
   if (p.warranty_enabled) {
     lines.push(`• <b>Garansi</b> : ${escapeHtml(p.warranty_label || 'Ada')}`);
