@@ -286,15 +286,25 @@ async function renderPayment(orderNo, token) {
 
   paint();
 
-  // QRIS data lives on the create response; for reloads we show a generic notice.
+  // Branded QRIS card from the backend (same style as the bot). Works on reload
+  // too since it reads the payload from the DB. Falls back to a plain QR image
+  // from the stored payload if the branded image fails to load.
   const qris = root().querySelector('[data-qris]');
   if (qris) {
     const stored = sessionStorage.getItem('cs_qris_' + orderNo);
-    if (stored) {
-      qris.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(stored)}" alt="QRIS" width="240" height="240" />`;
-    } else {
-      qris.innerHTML = '<div class="muted">QRIS akan muncul setelah order dibuat. Jika kosong, hubungi admin.</div>';
-    }
+    const brandedSrc = `${API}/public/web-checkout/qr/${encodeURIComponent(orderNo)}.png`;
+    const img = new Image();
+    img.alt = 'QRIS';
+    img.className = 'pay-qris-img';
+    img.onload = () => { qris.innerHTML = ''; qris.appendChild(img); };
+    img.onerror = () => {
+      if (stored) {
+        qris.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(stored)}" alt="QRIS" width="300" height="300" />`;
+      } else {
+        qris.innerHTML = '<div class="muted">QRIS akan muncul setelah order dibuat. Jika kosong, hubungi admin.</div>';
+      }
+    };
+    img.src = brandedSrc;
   }
 
   let statusTimer = null;

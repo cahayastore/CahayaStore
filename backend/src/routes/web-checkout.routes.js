@@ -402,6 +402,46 @@ router.get('/payment-gateways/status/:orderNo', async (req, res) => {
   });
 });
 
+/* GET /api/public/web-checkout/qr/:orderNo.png — branded QRIS card image for
+   the web payment page (same style as the bot). Returns a PNG. Public: the QR
+   payload is already shown to the buyer; no credentials are exposed here. */
+router.get('/public/web-checkout/qr/:orderNo.png', async (req, res) => {
+  try {
+    const r = await query(
+      `SELECT o.id, o.order_no, o.total_amount, o.payment_status,
+              pay.qr_payload,
+              (SELECT p.name FROM order_items oi JOIN products p ON p.id = oi.product_id
+                WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS product_name,
+              (SELECT SUM(oi.quantity) FROM order_items oi WHERE oi.order_id = o.id) AS qty
+         FROM orders o
+         LEFT JOIN payments pay ON pay.order_id = o.id
+        WHERE o.order_no = $1
+        ORDER BY pay.created_at DESC NULLS LAST
+        LIMIT 1`,
+      [req.params.orderNo]
+    );
+    if (!r.rows.length || !r.rows[0].qr_payload) {
+      return res.status(404).json({ success: false, message: 'QR tidak ditemukan.' });
+    }
+    const row = r.rows[0];
+    const { buildQrisCard } = require('../qris-card.service');
+    const qty = Number(row.qty) || 1;
+    const subtitle = row.product_name ? `${row.product_name}${qty > 1 ? ' × ' + qty : ''}` : '';
+    const png = await buildQrisCard({
+      qrisData: row.qr_payload,
+      orderNo: row.order_no,
+      amount: Number(row.total_amount) || 0,
+      subtitle,
+    });
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.end(png);
+  } catch (e) {
+    console.error('[web-checkout qr png]', e.message);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 /* GET /api/public/web-checkout/credentials/:orderNo?token= */
 router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
   const token = String(req.query.token || '');

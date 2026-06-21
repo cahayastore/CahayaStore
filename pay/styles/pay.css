@@ -223,3 +223,6 @@
   color: var(--cds-muted, #94a3b8); font-size: 13px; cursor: pointer; text-decoration: underline;
 }
 .pay-modal-skip:hover { color: #fff; }
+
+/* Branded QRIS card image on the web payment page */
+.pay-qris-img { width: 300px; max-width: 86vw; height: auto; border-radius: 14px; display: block; margin: 0 auto; }

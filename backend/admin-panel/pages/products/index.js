@@ -29,6 +29,21 @@ function rowActions(p, ctx) {
       })
     }, 'Edit'),
     el('button', {
+      class: 'btn ghost small',
+      title: p.is_active ? 'Jadikan draft (sembunyikan dari etalase)' : 'Terbitkan produk',
+      onclick: async () => {
+        const toDraft = !!p.is_active;
+        if (!confirm(toDraft ? `Jadikan "${p.name}" sebagai draft? Produk akan disembunyikan dari etalase.` : `Terbitkan "${p.name}" ke etalase?`)) return;
+        try {
+          await api('/api/admin/products/' + p.id, { method: 'PUT', body: JSON.stringify({ is_active: !toDraft }) });
+          toast(toDraft ? 'Produk dijadikan draft.' : 'Produk diterbitkan.', 'ok');
+          ctx.reload();
+        } catch (e) {
+          toast('Gagal: ' + e.message, 'err');
+        }
+      }
+    }, p.is_active ? '📝 Draft' : '🚀 Terbitkan'),
+    el('button', {
       class: 'btn danger small',
       onclick: async () => {
         if (!confirm(`Hapus produk "${p.name}"?`)) return;
@@ -61,8 +76,8 @@ function productRow(p, ctx) {
     el('td', {}, formatIDR(p.price)),
     el('td', {}, String(p.stock_count || 0)),
     el('td', {},
-      el('span', { class: 'badge ' + (p.is_active ? 'ok' : 'danger') },
-        p.is_active ? 'Aktif' : 'Nonaktif')
+      el('span', { class: 'badge ' + (p.is_active ? 'ok' : 'warn') },
+        p.is_active ? 'Aktif' : '📝 Draft')
     ),
     el('td', {}, rowActions(p, ctx))
   );
