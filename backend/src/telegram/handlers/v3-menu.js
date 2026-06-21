@@ -123,8 +123,8 @@ async function tryRichProductList(ctx, { products, page, totalPages, reply_marku
   if (!products.length) return null;
   const columns = ['No', 'Produk', 'Harga'];
   const rows = products.map((p, i) => [String(i + 1), compactName(p.name, 28), rupiah(p.price)]);
-  const footer = `Halaman ${page + 1}/${totalPages} • ${wibTime()} WIB • Tekan nama produk di bawah untuk detail.`;
-  return sendRichTable(ctx, { title: '🛍️ LIST PRODUCT', columns, rows, footer, reply_markup });
+  const footerHtml = `<i>• Tekan nama produk di bawah untuk detail.</i><br><br>• ${wibTime()} WIB`;
+  return sendRichTable(ctx, { columns, rows, footerHtml, reply_markup });
 }
 
 async function showProductList(ctx, page = 0, opts = {}) {

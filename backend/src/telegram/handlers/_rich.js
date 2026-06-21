@@ -74,7 +74,7 @@ async function sendRichMessage(ctx, html, opts = {}) {
    - rows:     array of arrays; each cell is either a string, or
                { text, href } to render a link inside the cell
    - footer:   optional footer line (<footer>) */
-function buildTableHtml({ title, columns = [], rows = [], footer } = {}) {
+function buildTableHtml({ title, columns = [], rows = [], footer, footerHtml } = {}) {
   const cell = (c) => {
     if (c && typeof c === 'object' && c.href) {
       return `<td><a href="${escapeHtml(c.href)}">${escapeHtml(c.text)}</a></td>`;
@@ -89,14 +89,16 @@ function buildTableHtml({ title, columns = [], rows = [], footer } = {}) {
   const parts = [];
   if (title) parts.push(`<h3>${escapeHtml(title)}</h3>`);
   parts.push(`<table bordered striped>${headRow}${bodyRows}</table>`);
-  if (footer) parts.push(`<footer>${escapeHtml(footer)}</footer>`);
+  // footerHtml is raw HTML (caller-controlled); footer is plain text (escaped).
+  if (footerHtml) parts.push(`<footer>${footerHtml}</footer>`);
+  else if (footer) parts.push(`<footer>${escapeHtml(footer)}</footer>`);
   return parts.join('');
 }
 
 /* High-level: render a real bordered table as a rich message.
    Returns the sent Message on success, or null so the caller can fall back. */
-async function sendRichTable(ctx, { title, columns, rows, footer, reply_markup } = {}) {
-  const html = buildTableHtml({ title, columns, rows, footer });
+async function sendRichTable(ctx, { title, columns, rows, footer, footerHtml, reply_markup } = {}) {
+  const html = buildTableHtml({ title, columns, rows, footer, footerHtml });
   return sendRichMessage(ctx, html, { reply_markup });
 }
 
