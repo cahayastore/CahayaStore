@@ -147,11 +147,47 @@ async function createOrder(productId, qty) {
   }
   const dec = root().querySelector('[data-dec]');
   const inc = root().querySelector('[data-inc]');
-  if (dec) dec.addEventListener('click', () => { q = Math.max(1, q - 1); renderQty(); });
-  if (inc) inc.addEventListener('click', () => {
-    if (q >= maxQty) { flashHint(`⚠️ Stok tersedia hanya ${maxQty}`); return; }
-    q = Math.min(maxQty, q + 1); renderQty();
-  });
+
+  function stepDec() {
+    if (q <= 1) return false;
+    q = Math.max(1, q - 1); renderQty(); return true;
+  }
+  function stepInc() {
+    if (q >= maxQty) { flashHint(`⚠️ Stok tersedia hanya ${maxQty}`); return false; }
+    q = Math.min(maxQty, q + 1); renderQty(); return true;
+  }
+
+  // Press-and-hold to auto-repeat, accelerating the longer it's held.
+  function bindHold(btn, step) {
+    if (!btn) return;
+    let holdTimer = null;
+    let repeat = null;
+    let delay = 260;
+    const stop = () => {
+      if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+      if (repeat) { clearInterval(repeat); repeat = null; }
+      delay = 260;
+    };
+    const startRepeat = () => {
+      repeat = setInterval(() => {
+        const ok = step();
+        if (!ok) { stop(); return; }
+        // Accelerate: shorten interval over time down to 40ms.
+        if (delay > 45) { delay = Math.max(40, delay - 30); clearInterval(repeat); startRepeat(); }
+      }, delay);
+    };
+    const begin = (e) => {
+      // Single immediate step on press; auto-repeat after a short hold.
+      if (e.type === 'mousedown' && e.button !== 0) return;
+      step();
+      holdTimer = setTimeout(startRepeat, 420);
+    };
+    btn.addEventListener('mousedown', begin);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); begin(e); }, { passive: false });
+    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach((ev) => btn.addEventListener(ev, stop));
+  }
+  bindHold(dec, stepDec);
+  bindHold(inc, stepInc);
   if (qinput) {
     // Allow only digits while typing.
     qinput.addEventListener('input', () => {
