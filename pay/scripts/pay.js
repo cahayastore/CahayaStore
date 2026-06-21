@@ -109,10 +109,11 @@ async function createOrder(productId, qty) {
       <span class="pay-qty-label">Jumlah</span>
       <div class="pay-qty">
         <button type="button" class="pay-qty-btn" data-dec aria-label="Kurangi">−</button>
-        <span class="pay-qty-val" data-qval>${q}</span>
+        <input class="pay-qty-input" data-qinput type="text" inputmode="numeric" value="${q}" aria-label="Jumlah" />
         <button type="button" class="pay-qty-btn" data-inc aria-label="Tambah">+</button>
       </div>
     </div>
+    <div class="pay-qty-hint muted" data-qhint>Maks. ${maxQty} item</div>
     <div class="pay-subtotal">Total <b data-subtotal>${rupiah(price * q)}</b></div>
     `}` : '<h2>Hampir selesai</h2>'}
     <div class="pay-email" data-email-form ${soldOut ? 'hidden' : ''}>
@@ -130,19 +131,51 @@ async function createOrder(productId, qty) {
   const input = form.querySelector('[data-email]');
   const submit = form.querySelector('[data-email-submit]');
   const err = form.querySelector('[data-err]');
-  const qval = root().querySelector('[data-qval]');
+  const qinput = root().querySelector('[data-qinput]');
   const subEl = root().querySelector('[data-subtotal]');
+  const qhint = root().querySelector('[data-qhint]');
 
   function renderQty() {
-    if (qval) qval.textContent = q;
+    if (qinput) qinput.value = String(q);
     if (subEl) subEl.textContent = rupiah(price * q);
+  }
+  function flashHint(msg) {
+    if (!qhint) return;
+    qhint.textContent = msg;
+    qhint.classList.add('pay-qty-hint--warn');
+    setTimeout(() => { qhint.textContent = `Maks. ${maxQty} item`; qhint.classList.remove('pay-qty-hint--warn'); }, 2200);
   }
   const dec = root().querySelector('[data-dec]');
   const inc = root().querySelector('[data-inc]');
   if (dec) dec.addEventListener('click', () => { q = Math.max(1, q - 1); renderQty(); });
-  if (inc) inc.addEventListener('click', () => { q = Math.min(maxQty, q + 1); renderQty(); });
+  if (inc) inc.addEventListener('click', () => {
+    if (q >= maxQty) { flashHint(`⚠️ Stok tersedia hanya ${maxQty}`); return; }
+    q = Math.min(maxQty, q + 1); renderQty();
+  });
+  if (qinput) {
+    // Allow only digits while typing.
+    qinput.addEventListener('input', () => {
+      const digits = qinput.value.replace(/[^0-9]/g, '');
+      qinput.value = digits;
+      const n = parseInt(digits, 10);
+      if (Number.isFinite(n) && subEl) subEl.textContent = rupiah(price * Math.max(1, Math.min(maxQty, n)));
+    });
+    // Clamp on blur / Enter.
+    const commit = () => {
+      let n = parseInt(qinput.value, 10);
+      if (!Number.isFinite(n) || n < 1) n = 1;
+      if (n > maxQty) { n = maxQty; flashHint(`⚠️ Stok tersedia hanya ${maxQty}, disesuaikan.`); }
+      q = n; renderQty();
+    };
+    qinput.addEventListener('blur', commit);
+    qinput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+  }
 
   async function go() {
+    // Ensure qty is clamped before sending (in case the field was left focused).
+    let nq = parseInt(qinput ? qinput.value : q, 10);
+    if (!Number.isFinite(nq) || nq < 1) nq = 1;
+    q = Math.min(maxQty, nq);
     const email = text(input.value);
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Email tidak valid.'; return; }
     localStorage.setItem('cs_guest_email', email);

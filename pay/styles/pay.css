@@ -117,3 +117,21 @@
 .pay-cred-item .pay-cred-box { margin-bottom: 8px; }
 .pay-cred-item .pay-pre { white-space: pre-wrap; word-break: break-word; }
 .pay-deliver { display: flex; flex-direction: column; gap: 2px; }
+
+/* ===== Editable qty input (web pay) ===== */
+.pay-qty-input {
+  width: 56px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 16px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0 4px;
+  -moz-appearance: textfield;
+}
+.pay-qty-input:focus { outline: none; }
+.pay-qty-input::-webkit-outer-spin-button,
+.pay-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pay-qty-hint { font-size: 12px; margin: 4px 0 0; }
+.pay-qty-hint--warn { color: #f59e0b; font-weight: 600; }
