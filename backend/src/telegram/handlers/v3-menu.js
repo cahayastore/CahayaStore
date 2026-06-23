@@ -121,9 +121,9 @@ function buildListReplyKeyboard({ products, page, totalPages }) {
    Returns the sent Message on success, or null so the caller can fall back. */
 async function tryRichProductList(ctx, { products, page, totalPages, reply_markup }) {
   if (!products.length) return null;
-  const columns = ['No', 'Produk', 'Harga'];
-  const rows = products.map((p, i) => [String(i + 1), compactName(p.name, 28), rupiah(p.price)]);
-  const footerHtml = `<i>• Tekan nama produk di bawah untuk detail.</i><br><br>• ${wibTime()} WIB`;
+  const columns = ['Produk', 'Harga'];
+  const rows = products.map((p, i) => [`${i + 1}. ${compactName(p.name, 28)}`, rupiah(p.price)]);
+  const footerHtml = `<i>• Tekan nama produk di bawah untuk detail.</i>`;
   return sendRichTable(ctx, { columns, rows, footerHtml, reply_markup });
 }
 
