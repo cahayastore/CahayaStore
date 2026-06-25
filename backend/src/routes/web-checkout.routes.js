@@ -140,7 +140,7 @@ async function deliverCredentialsToTelegram(orderId) {
     let hasContent = false;
     const byProduct = new Map();
     const order = [];
-    const barcodes = []; // { name, value, symbology }
+    const barcodes = []; // { name, value, symbology }  (symbology 'image' => value is an image URL)
     for (const it of items.rows) {
       const name = it.product_name || 'Produk';
       if (!byProduct.has(name)) { byProduct.set(name, []); order.push(name); }
@@ -149,8 +149,12 @@ async function deliverCredentialsToTelegram(orderId) {
         try { content = decryptString(it.encrypted_content); } catch { content = ''; }
         if (content) {
           if (it.content_type === 'barcode') {
-            barcodes.push({ name, value: content.trim(), symbology: it.barcode_symbology || 'code128' });
-            byProduct.get(name).push(content.trim());
+            const sym = it.barcode_symbology || 'code128';
+            barcodes.push({ name, value: content.trim(), symbology: sym });
+            // For rendered barcodes show the value as text too; for uploaded
+            // images don't dump the raw URL into the text block.
+            if (sym !== 'image') byProduct.get(name).push(content.trim());
+            else hasContent = true;
           } else {
             byProduct.get(name).push(content.trim());
           }
@@ -177,20 +181,26 @@ async function deliverCredentialsToTelegram(orderId) {
     lines.push('Terima kasih sudah berbelanja di Cahaya Store! 🙏');
     await notifyBuyer(ord.telegram_id, lines.join('\n'));
 
-    // Send each barcode as a scannable image (best-effort, never blocks).
+    // Send each barcode as an image (best-effort, never blocks).
+    //  - symbology 'image' => admin uploaded a ready-made barcode/voucher image;
+    //    send that URL directly.
+    //  - otherwise           => render the stored value to a PNG via bwip-js.
     if (barcodes.length) {
       let renderBarcodePng = null;
       try { ({ renderBarcodePng } = require('../barcode.service')); } catch (e) { /* lib missing */ }
-      if (renderBarcodePng) {
-        const { InputFile } = require('grammy');
-        for (const bc of barcodes) {
-          try {
+      const { InputFile } = require('grammy');
+      for (const bc of barcodes) {
+        try {
+          if (bc.symbology === 'image') {
+            const caption = `🏷️ <b>${escapeHtml(bc.name)}</b>`;
+            await sendPhoto(ord.telegram_id, bc.value, caption);
+          } else if (renderBarcodePng) {
             const png = await renderBarcodePng(bc.value, bc.symbology);
             const caption = `🏷️ <b>${escapeHtml(bc.name)}</b>\n<code>${escapeHtml(bc.value)}</code>`;
             await sendPhoto(ord.telegram_id, new InputFile(png, 'barcode.png'), caption);
-          } catch (e) {
-            console.error('[deliver barcode]', e.message);
           }
+        } catch (e) {
+          console.error('[deliver barcode]', e.message);
         }
       }
     }
@@ -568,14 +578,22 @@ router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
     let cred;
     if (ct === 'barcode') {
       const sym = st.barcode_symbology || 'code128';
-      cred = {
-        type: 'barcode', stock_type: 'barcode', symbology: sym,
-        content: content.trim(),
-        // Buyer-facing PNG render. The route re-verifies owner/token and renders
-        // the actual sold barcode server-side (value is NOT taken from the URL).
-        imageUrl: `/api/public/web-checkout/barcode/${encodeURIComponent(row.order_no)}.png`
-          + `?token=${encodeURIComponent(token || '')}`,
-      };
+      if (sym === 'image') {
+        // Admin uploaded a ready-made barcode/voucher image; serve that URL as-is.
+        cred = {
+          type: 'barcode', stock_type: 'barcode', symbology: 'image',
+          imageUrl: content.trim(),
+        };
+      } else {
+        cred = {
+          type: 'barcode', stock_type: 'barcode', symbology: sym,
+          content: content.trim(),
+          // Buyer-facing PNG render. The route re-verifies owner/token and renders
+          // the actual sold barcode server-side (value is NOT taken from the URL).
+          imageUrl: `/api/public/web-checkout/barcode/${encodeURIComponent(row.order_no)}.png`
+            + `?token=${encodeURIComponent(token || '')}`,
+        };
+      }
     } else if (isUrl) cred = { type: 'link', stock_type: 'link', url: content.trim(), content: content.trim() };
     else if (ct === 'code') cred = { type: 'code', stock_type: 'code', code: content, content };
     else if (ct === 'credential') cred = { type: 'account', stock_type: 'account', content };

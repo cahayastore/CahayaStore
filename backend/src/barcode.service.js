@@ -9,14 +9,19 @@
      ean13   — 13-digit retail product codes.
      qrcode  — 2D QR.
      auto    — pick ean13 for valid 13-digit numerics, else code128.
+     image   — NOT rendered: stock content is a pre-made image URL the admin
+               uploaded; delivery sends that image as-is.
    ════════════════════════════════════════════════════════════════════ */
 const bwipjs = require('bwip-js');
 
+// Symbologies that this service renders. 'image' is intentionally excluded —
+// it means the stored content is an uploaded image URL, not a value to render.
 const SYMBOLOGIES = new Set(['code128', 'ean13', 'qrcode', 'auto']);
+const ALL_SYMBOLOGIES = new Set([...SYMBOLOGIES, 'image']);
 
 function normalizeSymbology(s) {
   const v = String(s || '').toLowerCase().trim();
-  return SYMBOLOGIES.has(v) ? v : 'code128';
+  return ALL_SYMBOLOGIES.has(v) ? v : 'code128';
 }
 
 /* Resolve 'auto' to a concrete bwip-js bcid based on the value shape. */
@@ -64,4 +69,4 @@ async function renderBarcodePng(value, symbology = 'code128') {
   }
 }
 
-module.exports = { renderBarcodePng, normalizeSymbology, resolveBcid, SYMBOLOGIES };
+module.exports = { renderBarcodePng, normalizeSymbology, resolveBcid, SYMBOLOGIES, ALL_SYMBOLOGIES };

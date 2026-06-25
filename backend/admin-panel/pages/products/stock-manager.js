@@ -101,8 +101,10 @@ function buildAddForm(product, onAdded) {
     { value: 'ean13', label: 'EAN-13 (13 digit ritel)' },
     { value: 'qrcode', label: 'QR Code (2D)' },
     { value: 'auto', label: 'Auto (deteksi dari nilai)' },
+    { value: 'image', label: 'Upload Gambar (1 gambar = 1 stok)' },
   ];
   let barcodeSymbology = 'code128';
+  const uploadedImages = []; // URLs of uploaded barcode images (symbology 'image')
 
   // Pick a sensible default based on the product stock_type.
   const defaultType = STOCK_CONTENT_MAP[product.stock_type] || 'code';
@@ -111,7 +113,7 @@ function buildAddForm(product, onAdded) {
   // Symbology selector — only visible when content type is 'barcode'.
   const symbologySelect = el('select', {
     style: 'width:100%;padding:10px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--mkd-radius-md);color:var(--color-text-primary);margin-bottom:10px',
-    onchange: (e) => { barcodeSymbology = e.target.value; },
+    onchange: (e) => { barcodeSymbology = e.target.value; toggleImageMode(); },
   });
   SYMBOLOGY_OPTIONS.forEach((o) => {
     const opt = el('option', { value: o.value }, o.label);
@@ -123,6 +125,57 @@ function buildAddForm(product, onAdded) {
     symbologySelect
   );
 
+  // Image-upload UI (only for barcode + symbology 'image').
+  const imgPreview = el('div', {
+    style: 'display:flex;flex-wrap:wrap;gap:8px;margin:6px 0',
+  });
+  function renderImgPreview() {
+    imgPreview.innerHTML = '';
+    uploadedImages.forEach((url, i) => {
+      imgPreview.appendChild(el('div', { style: 'position:relative' },
+        el('img', { src: url, style: 'width:84px;height:54px;object-fit:contain;background:#fff;border:1px solid var(--color-border);border-radius:8px' }),
+        el('button', {
+          class: 'btn danger small', type: 'button',
+          style: 'position:absolute;top:-8px;right:-8px;padding:1px 6px;line-height:1;border-radius:999px',
+          onclick: () => { uploadedImages.splice(i, 1); renderImgPreview(); updateCounter(); },
+        }, '✕')
+      ));
+    });
+  }
+  const fileInput = el('input', {
+    type: 'file', accept: 'image/*', multiple: true,
+    style: 'width:100%;font-size:var(--fs-sm);margin-bottom:8px',
+    onchange: async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+      for (const f of files) {
+        try {
+          const fd = new FormData();
+          fd.append('file', f);
+          const r = await api('/api/admin/uploads?preset=default', { method: 'POST', body: fd });
+          if (r && r.url) uploadedImages.push(r.url);
+        } catch (err) {
+          toast(err.message || 'Gagal unggah gambar.', 'err');
+        }
+      }
+      e.target.value = '';
+      renderImgPreview();
+      updateCounter();
+    },
+  });
+  const imageWrap = el('div', { style: 'display:none' },
+    el('label', { class: 'muted', style: 'display:block;font-size:var(--fs-xs);margin-bottom:4px' }, 'Unggah gambar barcode (boleh banyak — tiap gambar jadi 1 stok)'),
+    fileInput,
+    imgPreview
+  );
+
+  function toggleImageMode() {
+    const isImage = contentType === 'barcode' && barcodeSymbology === 'image';
+    imageWrap.style.display = isImage ? 'block' : 'none';
+    textarea.style.display = isImage ? 'none' : 'block';
+    updateCounter();
+  }
+
   const select = el('select', {
     style: 'width:100%;padding:10px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--mkd-radius-md);color:var(--color-text-primary);margin-bottom:10px',
     onchange: (e) => {
@@ -130,6 +183,7 @@ function buildAddForm(product, onAdded) {
       const opt = CONTENT_OPTIONS.find((o) => o.value === contentType);
       if (opt) textarea.placeholder = opt.placeholder;
       symbologyWrap.style.display = contentType === 'barcode' ? 'block' : 'none';
+      toggleImageMode();
     },
   });
   CONTENT_OPTIONS.forEach((o) => {
@@ -147,15 +201,20 @@ function buildAddForm(product, onAdded) {
   });
 
   const counter = el('div', { class: 'muted', style: 'font-size:var(--fs-xs);margin-top:6px' }, '0 item');
-  textarea.addEventListener('input', () => {
-    counter.textContent = parseStockItems(textarea.value).length + ' item';
-  });
+  function updateCounter() {
+    const n = (contentType === 'barcode' && barcodeSymbology === 'image')
+      ? uploadedImages.length
+      : parseStockItems(textarea.value).length;
+    counter.textContent = n + ' item';
+  }
+  textarea.addEventListener('input', updateCounter);
 
   const addBtn = el('button', { class: 'btn primary', type: 'button' }, '+ Tambah ke Stok');
   addBtn.addEventListener('click', async () => {
-    const items = parseStockItems(textarea.value);
+    const isImage = contentType === 'barcode' && barcodeSymbology === 'image';
+    const items = isImage ? uploadedImages.slice() : parseStockItems(textarea.value);
     if (!items.length) {
-      toast('Isi minimal satu item.', 'err');
+      toast(isImage ? 'Unggah minimal satu gambar.' : 'Isi minimal satu item.', 'err');
       return;
     }
     addBtn.disabled = true;
@@ -168,7 +227,9 @@ function buildAddForm(product, onAdded) {
         body: JSON.stringify(payload),
       });
       textarea.value = '';
-      counter.textContent = '0 item';
+      uploadedImages.length = 0;
+      renderImgPreview();
+      updateCounter();
       toast(`Berhasil menambahkan ${r.count} stok.`, 'ok');
       onAdded();
     } catch (e) {
@@ -179,11 +240,14 @@ function buildAddForm(product, onAdded) {
     }
   });
 
+  toggleImageMode();
+
   return el('div', {},
     el('p', { class: 'hint', style: 'margin:0 0 8px;color:var(--color-text-muted);font-size:var(--fs-sm)' },
-      'Pilih jenis konten, lalu masukkan satu item per baris. Tiap baris = satu stok. URL otomatis dikirim sebagai link. Untuk barcode, masukkan nilai/angka — bot mengirim gambar barcode otomatis.'),
+      'Pilih jenis konten, lalu masukkan satu item per baris. Tiap baris = satu stok. URL otomatis dikirim sebagai link. Untuk barcode: masukkan nilai (bot render gambar) atau pilih “Upload Gambar” untuk mengunggah gambar barcode siap pakai.'),
     select,
     symbologyWrap,
+    imageWrap,
     textarea,
     el('div', { style: 'display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px' },
       counter,
