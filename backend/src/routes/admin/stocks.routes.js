@@ -5,14 +5,16 @@
      GET    /api/admin/products/:id/stocks         → list (encrypted_content disensor)
      POST   /api/admin/products/:id/stocks         → bulk insert (array items)
      DELETE /api/admin/products/:id/stocks/:stockId
-   Content type yang valid: 'file' | 'credential' | 'code' | 'note'
+   Content type yang valid: 'file' | 'credential' | 'code' | 'note' | 'barcode'
+   Untuk 'barcode', sertakan barcode_symbology: code128 | ean13 | qrcode | auto
    ════════════════════════════════════════════════════════════════════ */
 const express = require('express');
 const { query } = require('../../db');
 const { encryptString } = require('../../crypto');
+const { normalizeSymbology } = require('../../barcode.service');
 
 const router = express.Router();
-const CONTENT_TYPES = new Set(['file', 'credential', 'code', 'note']);
+const CONTENT_TYPES = new Set(['file', 'credential', 'code', 'note', 'barcode']);
 
 /* Render a stock-alert template with simple {placeholders}. */
 function renderTemplate(tpl, vars) {
@@ -59,7 +61,7 @@ async function maybeBroadcastStockAdded(productId, addedCount) {
 /* List */
 router.get('/products/:id/stocks', async (req, res) => {
   const r = await query(
-    `SELECT id, content_type, status, file_path, created_at, sold_at,
+    `SELECT id, content_type, status, file_path, created_at, sold_at, barcode_symbology,
             CASE WHEN encrypted_content IS NOT NULL THEN '••• terenkripsi •••' END AS preview
        FROM product_stocks
       WHERE product_id = $1
@@ -87,7 +89,10 @@ router.post('/products/:id/stocks', async (req, res) => {
     return res.status(404).json({ success: false, message: 'Produk tidak ditemukan' });
   }
 
-  // Normalisasi items menjadi [{ content_type, content }]
+  // Normalisasi items menjadi [{ content_type, content, symbology }]
+  // Untuk content_type 'barcode', symbology diambil dari body.barcode_symbology
+  // (mode seragam) atau dari masing-masing item (mode campuran).
+  const topSymbology = body.barcode_symbology ? normalizeSymbology(body.barcode_symbology) : null;
   let items = [];
   if (Array.isArray(body.items)) {
     if (body.content_type) {
@@ -97,14 +102,24 @@ router.post('/products/:id/stocks', async (req, res) => {
       items = body.items
         .map((s) => (typeof s === 'string' ? s.trim() : ''))
         .filter(Boolean)
-        .map((s) => ({ content_type: body.content_type, content: s }));
+        .map((s) => ({
+          content_type: body.content_type,
+          content: s,
+          symbology: body.content_type === 'barcode' ? (topSymbology || 'code128') : null,
+        }));
     } else {
       items = body.items
         .filter((x) => x && typeof x === 'object')
-        .map((x) => ({
-          content_type: String(x.content_type || '').trim(),
-          content: String(x.content || '').trim(),
-        }))
+        .map((x) => {
+          const ct = String(x.content_type || '').trim();
+          return {
+            content_type: ct,
+            content: String(x.content || '').trim(),
+            symbology: ct === 'barcode'
+              ? normalizeSymbology(x.barcode_symbology || topSymbology || 'code128')
+              : null,
+          };
+        })
         .filter((x) => CONTENT_TYPES.has(x.content_type) && x.content);
     }
   }
@@ -121,10 +136,10 @@ router.post('/products/:id/stocks', async (req, res) => {
   for (const it of items) {
     const enc = encryptString(it.content);
     const r = await query(
-      `INSERT INTO product_stocks (product_id, content_type, encrypted_content, status)
-       VALUES ($1, $2, $3, 'available')
-       RETURNING id, content_type, status, created_at`,
-      [productId, it.content_type, enc]
+      `INSERT INTO product_stocks (product_id, content_type, encrypted_content, barcode_symbology, status)
+       VALUES ($1, $2, $3, $4, 'available')
+       RETURNING id, content_type, barcode_symbology, status, created_at`,
+      [productId, it.content_type, enc, it.symbology || null]
     );
     inserted.push(r.rows[0]);
   }

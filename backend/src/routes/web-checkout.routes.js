@@ -119,7 +119,7 @@ async function deliverCredentialsToTelegram(orderId) {
     // joined to their product name. Uses product_stocks.sold_order_id which links
     // every sold unit to the order (fixes "bought 3 but only 1 delivered").
     const items = await query(
-      `SELECT s.id AS stock_id, s.content_type, s.encrypted_content,
+      `SELECT s.id AS stock_id, s.content_type, s.encrypted_content, s.barcode_symbology,
               p.name AS product_name, p.stock_type
          FROM product_stocks s
          JOIN products p ON p.id = s.product_id
@@ -128,7 +128,7 @@ async function deliverCredentialsToTelegram(orderId) {
       [orderId]
     );
 
-    const { escapeHtml, notifyBuyer } = require('../telegram/bot-loader');
+    const { escapeHtml, notifyBuyer, sendPhoto } = require('../telegram/bot-loader');
     const lines = [
       '✅ <b>Pembayaran berhasil!</b>',
       `Order: <code>${escapeHtml(ord.order_no)}</code>`,
@@ -136,16 +136,25 @@ async function deliverCredentialsToTelegram(orderId) {
     ];
     // Group all delivered units per product into a SINGLE combined block so the
     // buyer gets one tidy copyable list (one credential per line) instead of N cards.
+    // Barcode units are collected separately and sent as scannable images after.
     let hasContent = false;
     const byProduct = new Map();
     const order = [];
+    const barcodes = []; // { name, value, symbology }
     for (const it of items.rows) {
       const name = it.product_name || 'Produk';
       if (!byProduct.has(name)) { byProduct.set(name, []); order.push(name); }
       if (it.encrypted_content) {
         let content = '';
         try { content = decryptString(it.encrypted_content); } catch { content = ''; }
-        if (content) byProduct.get(name).push(content.trim());
+        if (content) {
+          if (it.content_type === 'barcode') {
+            barcodes.push({ name, value: content.trim(), symbology: it.barcode_symbology || 'code128' });
+            byProduct.get(name).push(content.trim());
+          } else {
+            byProduct.get(name).push(content.trim());
+          }
+        }
       }
     }
     for (const name of order) {
@@ -162,8 +171,29 @@ async function deliverCredentialsToTelegram(orderId) {
     if (!hasContent) {
       lines.push('Produk akan segera diproses oleh admin.');
     }
+    if (barcodes.length) {
+      lines.push('📷 Barcode dikirim sebagai gambar di bawah — tunjukkan/scan saat penukaran.');
+    }
     lines.push('Terima kasih sudah berbelanja di Cahaya Store! 🙏');
     await notifyBuyer(ord.telegram_id, lines.join('\n'));
+
+    // Send each barcode as a scannable image (best-effort, never blocks).
+    if (barcodes.length) {
+      let renderBarcodePng = null;
+      try { ({ renderBarcodePng } = require('../barcode.service')); } catch (e) { /* lib missing */ }
+      if (renderBarcodePng) {
+        const { InputFile } = require('grammy');
+        for (const bc of barcodes) {
+          try {
+            const png = await renderBarcodePng(bc.value, bc.symbology);
+            const caption = `🏷️ <b>${escapeHtml(bc.name)}</b>\n<code>${escapeHtml(bc.value)}</code>`;
+            await sendPhoto(ord.telegram_id, new InputFile(png, 'barcode.png'), caption);
+          } catch (e) {
+            console.error('[deliver barcode]', e.message);
+          }
+        }
+      }
+    }
   } catch (e) {
     console.error('[deliverCredentialsToTelegram]', e.message);
   }
@@ -442,6 +472,47 @@ router.get('/public/web-checkout/qr/:orderNo', async (req, res) => {
   }
 });
 
+/* GET /api/public/web-checkout/barcode/:orderNo.png?token=
+   Renders the buyer's purchased barcode as a PNG. Re-verifies owner/token and
+   reads the barcode VALUE server-side (never from the URL). */
+router.get('/public/web-checkout/barcode/:orderNo.png', async (req, res) => {
+  try {
+    const token = String(req.query.token || '');
+    const orderNo = req.params.orderNo;
+    const r = await query(
+      `SELECT o.id, o.payment_status, o.access_token, o.user_id
+         FROM orders o WHERE o.order_no = $1 LIMIT 1`,
+      [orderNo]
+    );
+    if (!r.rows.length) return res.status(404).end();
+    const row = r.rows[0];
+
+    const auth = resolveCustomer(req);
+    const isOwner = auth && row.user_id && String(auth.userId) === String(row.user_id);
+    const tokenOk = token && token === row.access_token;
+    if (!(isOwner || (!row.user_id && tokenOk))) return res.status(404).end();
+    if (row.payment_status !== 'paid') return res.status(404).end();
+
+    const sold = await query(
+      "SELECT encrypted_content, barcode_symbology FROM product_stocks WHERE sold_order_id = $1 AND content_type = 'barcode' ORDER BY sold_at ASC LIMIT 1",
+      [row.id]
+    );
+    if (!sold.rows.length || !sold.rows[0].encrypted_content) return res.status(404).end();
+    let value = '';
+    try { value = decryptString(sold.rows[0].encrypted_content); } catch { value = ''; }
+    if (!value) return res.status(404).end();
+
+    const { renderBarcodePng } = require('../barcode.service');
+    const png = await renderBarcodePng(value.trim(), sold.rows[0].barcode_symbology || 'code128');
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'private, max-age=60');
+    res.send(png);
+  } catch (e) {
+    console.error('[web-checkout barcode png]', e.message);
+    res.status(500).end();
+  }
+});
+
 /* GET /api/public/web-checkout/credentials/:orderNo?token= */
 router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
   const token = String(req.query.token || '');
@@ -484,7 +555,7 @@ router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
   let stockType = row.stock_type || 'manual';
   const items = [];
   const sold = await query(
-    "SELECT content_type, encrypted_content FROM product_stocks WHERE sold_order_id = $1 ORDER BY sold_at ASC",
+    "SELECT content_type, encrypted_content, barcode_symbology FROM product_stocks WHERE sold_order_id = $1 ORDER BY sold_at ASC",
     [row.id]
   );
   for (const st of sold.rows) {
@@ -495,7 +566,17 @@ router.get('/public/web-checkout/credentials/:orderNo', async (req, res) => {
     const ct = st.content_type;
     const isUrl = /^https?:\/\/\S+$/i.test(content.trim());
     let cred;
-    if (isUrl) cred = { type: 'link', stock_type: 'link', url: content.trim(), content: content.trim() };
+    if (ct === 'barcode') {
+      const sym = st.barcode_symbology || 'code128';
+      cred = {
+        type: 'barcode', stock_type: 'barcode', symbology: sym,
+        content: content.trim(),
+        // Buyer-facing PNG render. The route re-verifies owner/token and renders
+        // the actual sold barcode server-side (value is NOT taken from the URL).
+        imageUrl: `/api/public/web-checkout/barcode/${encodeURIComponent(row.order_no)}.png`
+          + `?token=${encodeURIComponent(token || '')}`,
+      };
+    } else if (isUrl) cred = { type: 'link', stock_type: 'link', url: content.trim(), content: content.trim() };
     else if (ct === 'code') cred = { type: 'code', stock_type: 'code', code: content, content };
     else if (ct === 'credential') cred = { type: 'account', stock_type: 'account', content };
     else cred = { type: 'note', stock_type: 'note', content };

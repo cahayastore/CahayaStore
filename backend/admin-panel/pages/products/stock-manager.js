@@ -92,12 +92,36 @@ function buildAddForm(product, onAdded) {
   const CONTENT_OPTIONS = [
     { value: 'code', label: 'Kode / Voucher / Link', placeholder: 'ABCD-1234-EFGH\nhttps://drive.google.com/...' },
     { value: 'credential', label: 'Akun (email:password)', placeholder: 'user1@example.com:passw0rd\nuser2@example.com:passw0rd:2fa' },
+    { value: 'barcode', label: 'Barcode (nilai → gambar)', placeholder: '8991234567890\nVCH-2026-0001' },
     { value: 'note', label: 'Catatan / Teks', placeholder: 'Instruksi atau teks lain, satu baris = satu stok' },
   ];
+
+  const SYMBOLOGY_OPTIONS = [
+    { value: 'code128', label: 'Code128 (umum 1D)' },
+    { value: 'ean13', label: 'EAN-13 (13 digit ritel)' },
+    { value: 'qrcode', label: 'QR Code (2D)' },
+    { value: 'auto', label: 'Auto (deteksi dari nilai)' },
+  ];
+  let barcodeSymbology = 'code128';
 
   // Pick a sensible default based on the product stock_type.
   const defaultType = STOCK_CONTENT_MAP[product.stock_type] || 'code';
   let contentType = CONTENT_OPTIONS.some((o) => o.value === defaultType) ? defaultType : 'code';
+
+  // Symbology selector — only visible when content type is 'barcode'.
+  const symbologySelect = el('select', {
+    style: 'width:100%;padding:10px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--mkd-radius-md);color:var(--color-text-primary);margin-bottom:10px',
+    onchange: (e) => { barcodeSymbology = e.target.value; },
+  });
+  SYMBOLOGY_OPTIONS.forEach((o) => {
+    const opt = el('option', { value: o.value }, o.label);
+    if (o.value === barcodeSymbology) opt.selected = true;
+    symbologySelect.appendChild(opt);
+  });
+  const symbologyWrap = el('div', { style: 'display:none' },
+    el('label', { class: 'muted', style: 'display:block;font-size:var(--fs-xs);margin-bottom:4px' }, 'Jenis barcode'),
+    symbologySelect
+  );
 
   const select = el('select', {
     style: 'width:100%;padding:10px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--mkd-radius-md);color:var(--color-text-primary);margin-bottom:10px',
@@ -105,6 +129,7 @@ function buildAddForm(product, onAdded) {
       contentType = e.target.value;
       const opt = CONTENT_OPTIONS.find((o) => o.value === contentType);
       if (opt) textarea.placeholder = opt.placeholder;
+      symbologyWrap.style.display = contentType === 'barcode' ? 'block' : 'none';
     },
   });
   CONTENT_OPTIONS.forEach((o) => {
@@ -112,6 +137,7 @@ function buildAddForm(product, onAdded) {
     if (o.value === contentType) opt.selected = true;
     select.appendChild(opt);
   });
+  if (contentType === 'barcode') symbologyWrap.style.display = 'block';
 
   const startPlaceholder = (CONTENT_OPTIONS.find((o) => o.value === contentType) || {}).placeholder || '';
   const textarea = el('textarea', {
@@ -135,9 +161,11 @@ function buildAddForm(product, onAdded) {
     addBtn.disabled = true;
     addBtn.textContent = 'Menyimpan…';
     try {
+      const payload = { content_type: contentType, items };
+      if (contentType === 'barcode') payload.barcode_symbology = barcodeSymbology;
       const r = await api(`/api/admin/products/${product.id}/stocks`, {
         method: 'POST',
-        body: JSON.stringify({ content_type: contentType, items }),
+        body: JSON.stringify(payload),
       });
       textarea.value = '';
       counter.textContent = '0 item';
@@ -153,8 +181,9 @@ function buildAddForm(product, onAdded) {
 
   return el('div', {},
     el('p', { class: 'hint', style: 'margin:0 0 8px;color:var(--color-text-muted);font-size:var(--fs-sm)' },
-      'Pilih jenis konten, lalu masukkan satu item per baris. Tiap baris = satu stok. URL otomatis dikirim sebagai link.'),
+      'Pilih jenis konten, lalu masukkan satu item per baris. Tiap baris = satu stok. URL otomatis dikirim sebagai link. Untuk barcode, masukkan nilai/angka — bot mengirim gambar barcode otomatis.'),
     select,
+    symbologyWrap,
     textarea,
     el('div', { style: 'display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px' },
       counter,

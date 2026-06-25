@@ -14,6 +14,7 @@ export const STEPS = [
 export const STOCK_CONTENT_MAP = {
   code:    'code',
   account: 'credential',
+  barcode: 'barcode',
   file:    'file',
   manual:  null,     // skip stok pas create — admin tambah belakangan
   pre_order: null,   // tidak butuh stok
@@ -30,6 +31,11 @@ export const STOCK_INPUT_CONFIG = {
     title: 'Daftar Akun (email:password)',
     hint:  'Satu akun per baris. Format bebas — disarankan email:password atau email:password:2fa.',
     placeholder: 'user1@example.com:passw0rd\nuser2@example.com:passw0rd:2faSecret',
+  },
+  barcode: {
+    title: 'Daftar Barcode',
+    hint:  'Satu nilai barcode per baris (angka/teks). Bot akan mengirim gambar barcode otomatis ke pembeli. Atur jenis barcode di modal Kelola Stok.',
+    placeholder: '8991234567890\nVCH-2026-0001',
   },
   file: {
     title: 'File Digital',
@@ -76,6 +82,7 @@ export const STOCK_TYPES = [
   { value: 'manual',     label: 'Manual',          desc: 'Stok diisi admin manual via panel.' },
   { value: 'code',       label: 'Kode / Voucher',  desc: 'Satu kode = satu stok.' },
   { value: 'account',    label: 'Email:Password',  desc: 'Format akun, satu baris per akun.' },
+  { value: 'barcode',    label: 'Barcode',         desc: 'Satu nilai = satu barcode; dikirim sebagai gambar.' },
   { value: 'file',       label: 'File Upload',     desc: 'Satu file digital = satu stok.' },
   { value: 'pre_order',  label: 'Pre-Order',       desc: 'Pesanan diproses manual oleh admin.' },
 ];
