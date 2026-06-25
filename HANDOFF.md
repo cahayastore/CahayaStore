@@ -195,6 +195,18 @@ Verified this session; the previous pending list was stale. Status:
    endpoints once confirmed unused, to remove duplicate payment logic (now
    behaviour-equivalent but still two code paths to maintain). NEEDS
    CONFIRMATION they're truly unused before removal.
+   EVIDENCE (nginx logs 11–25 Jun 2026, ~14 days):
+     - `/api/webhooks/myqris`: 0 hits (fully dead).
+     - `POST /api/checkout`: 3 hits, all 24 Jun from Cloudflare IPs with
+       user-agent "a" (scanner probes), statuses 504/400/504 — the 400 is our
+       new uuid guard rejecting a malformed probe. No real client traffic.
+     - canonical `…/webhook/payhook`: 1413 hits (the live path).
+   So both legacy endpoints are safe to remove (only bots touch them). Left
+   undeleted intentionally: removing live payment-mount code is medium-risk and
+   was not worth doing unattended while the system is working correctly. To
+   retire: drop the `/api/webhooks` myqris route + `/api/checkout` mount in
+   `server.js` and delete `webhook.routes.js` myqris handler + `checkout.routes.js`
+   (keep the Telegram per-bot webhook in webhook.routes.js if still used).
 3. Keep syncing server→laptop. Laptop typically has no clone; use the
    scp-to-server + commit-on-server flow above.
 
