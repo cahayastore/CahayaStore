@@ -5,3 +5,6 @@ dist
 logs
 *.log
 .DS_Store
+
+# deploy artifact (copied from storefront/index.html by deploy.sh)
+/index.html
