@@ -5,12 +5,19 @@ const { createInvoice } = require('../payment/myqris.service');
 
 const router = express.Router();
 
+// Basic UUID v1-v5 shape check so a missing/garbage product_id returns a clean
+// 400 instead of throwing "invalid input syntax for type uuid" deeper in PG.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 router.post('/checkout', async (req, res) => {
   const { items, buyer } = req.body || {};
   if (!Array.isArray(items) || !items.length) {
     return res.status(400).json({ success: false, message: 'items required' });
   }
-  const productIds = items.map(i => String(i.product_id));
+  const productIds = items.map(i => String(i.product_id ?? ''));
+  if (!productIds.every(id => UUID_RE.test(id))) {
+    return res.status(400).json({ success: false, message: 'Setiap item butuh product_id yang valid.' });
+  }
   const r = await query(
     "SELECT id, name, price, partner_id FROM products WHERE id = ANY($1::uuid[]) AND is_active = TRUE",
     [productIds]

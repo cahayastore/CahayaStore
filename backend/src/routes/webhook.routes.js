@@ -59,6 +59,11 @@ async function deliverOrder(client, orderId) {
  * received transaction amount + a shared token. We match a pending payment by
  * exact amount, mark it paid, and deliver the product.
  *
+ * NOTE: production PayHook targets /api/payment-gateways/webhook/payhook
+ * (web-checkout.routes.js). This endpoint is kept for compatibility and now
+ * runs the SAME post-commit side effects (buyer Telegram delivery, admin
+ * notify, referral/top-up wallet credit) so behaviour is identical either way.
+ *
  * Accepts JSON or form-encoded body. Fields (flexible):
  *   amount | nominal | jumlah   → number (required)
  *   token  | secret  | key      → shared token (or header X-PayHook-Token)
@@ -118,17 +123,60 @@ router.post('/myqris', async (req, res) => {
         "UPDATE orders SET payment_status='paid', status='paid', paid_at=now(), updated_at=now() WHERE id=$1",
         [order.id]
       );
-      await deliverOrder(client, order.id);
+      const isTopup = order.order_kind === 'topup';
+      if (!isTopup) await deliverOrder(client, order.id);
       await client.query(
         "INSERT INTO audit_logs (action, entity_type, entity_id, metadata) VALUES ('payment.paid','order',$1,$2)",
         [order.id, payload]
       );
-      return { matched: true, orderNo: order.order_no };
+      // Product names for the buyer/admin notification (best-effort).
+      const prod = await client.query(
+        `SELECT COALESCE(string_agg(p.name, ', '), '') AS names
+           FROM order_items oi LEFT JOIN products p ON p.id = oi.product_id
+          WHERE oi.order_id = $1`,
+        [order.id]
+      );
+      return {
+        matched: true,
+        orderNo: order.order_no,
+        orderId: order.id,
+        isTopup,
+        paid: { orderNo: order.order_no, amount: order.total_amount, email: order.buyer_email, products: prod.rows[0]?.names || '', channel: order.channel },
+      };
     });
 
     if (!result.matched) {
       return res.status(404).json({ success: false, message: 'Tidak ada order pending yang cocok.' });
     }
+
+    // ── Post-commit side effects (non-blocking; mirror the canonical PayHook
+    //    handler in web-checkout.routes.js so this legacy endpoint is correct
+    //    regardless of which URL PayHook targets). ──
+    if (result.matched && !result.already && result.orderId) {
+      // Wallet: credit top-ups, pay referral bonus on first paid product order.
+      try {
+        const wallet = require('../wallet.service');
+        if (result.isTopup) wallet.creditTopup(result.orderId).catch((e) => console.error('[payhook topup]', e.message));
+        else wallet.payReferralBonus(result.orderId).catch((e) => console.error('[payhook referral]', e.message));
+      } catch (e) { console.error('[payhook wallet]', e.message); }
+
+      // Notify admin via Telegram.
+      if (result.paid) {
+        try {
+          require('../telegram/bot-loader').notifyOrderPaid(result.paid)
+            .catch((e) => console.error('[payhook notify]', e.message));
+        } catch (e) { console.error('[payhook notify load]', e.message); }
+      }
+
+      // Deliver purchased credentials to the buyer via Telegram (product orders only).
+      if (!result.isTopup) {
+        try {
+          require('./web-checkout.routes').deliverCredentialsToTelegram(result.orderId)
+            .catch((e) => console.error('[payhook deliver tg]', e.message));
+        } catch (e) { console.error('[payhook deliver load]', e.message); }
+      }
+    }
+
     res.json({ success: true, orderId: result.orderNo, already: !!result.already });
   } catch (e) {
     console.error('[payhook]', e);
