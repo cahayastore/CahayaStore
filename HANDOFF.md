@@ -191,6 +191,19 @@ Verified this session; the previous pending list was stale. Status:
    online on :9000 but no nginx `deploy.` site is enabled; decide whether to
    expose it or trigger deploys another way). NEEDS A DECISION — exposing a
    network service, so left for explicit direction.
+   READY TO GO when you approve:
+     - `deploy.cahayastore.me` DNS already resolves (Cloudflare). ✔
+     - deploy-hook/server.js is solid: HMAC SHA-256 verify, push-to-main only,
+       single-flight, 5-min timeout, binds 127.0.0.1:9000. ✔
+     - GITHUB_WEBHOOK_SECRET already set in deploy-hook/.env. ✔
+     - A ready-to-apply nginx site is committed at
+       `deploy-hook/nginx.deploy.cahayastore.me.conf.example` with full
+       enable steps in its header (copy to sites-available, symlink, certbot,
+       nginx -t && reload, then add the GitHub webhook to
+       https://deploy.cahayastore.me/webhook with the secret + push event).
+     - CAUTION: enabling turns on auto-deploy on every push to main
+       (git reset --hard origin/main && bash deploy.sh) and /status currently
+       exposes the deploy log tail (the example shows how to lock it down).
 2. Consider RETIRING the legacy `/api/webhooks/myqris` and `/api/checkout`
    endpoints once confirmed unused, to remove duplicate payment logic (now
    behaviour-equivalent but still two code paths to maintain). NEEDS

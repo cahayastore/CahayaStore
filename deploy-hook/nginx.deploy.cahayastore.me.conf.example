@@ -1,0 +1,65 @@
+# Ready-to-apply nginx site for the deploy-hook (NOT yet enabled).
+#
+# Why this is staged, not enabled: enabling it exposes a public /webhook
+# endpoint and turns on auto-deploy on every push to main
+# (git fetch && git reset --hard origin/main && bash deploy.sh). That's a
+# workflow + security change to opt into deliberately.
+#
+# Security posture (already good in deploy-hook/server.js):
+#   - verifies GitHub HMAC SHA-256 (x-hub-signature-256) against
+#     GITHUB_WEBHOOK_SECRET (timing-safe compare)
+#   - only acts on event=push to refs/heads/main; ping -> pong; others ignored
+#   - single-flight (won't overlap deploys), 5-min exec timeout
+#   - app binds 127.0.0.1:9000 so it's only reachable via this proxy
+#
+# TO ENABLE (run on the server):
+#   1. sudo tee /etc/nginx/sites-available/deploy.cahayastore.me.conf < this file
+#   2. sudo ln -s /etc/nginx/sites-available/deploy.cahayastore.me.conf \
+#        /etc/nginx/sites-enabled/deploy.cahayastore.me.conf
+#   3. Get a cert (Cloudflare DNS for deploy.cahayastore.me must exist first):
+#        sudo certbot --nginx -d deploy.cahayastore.me
+#      (or reuse the existing wildcard/cert path used by the other *.cahayastore.me sites)
+#   4. sudo nginx -t && sudo systemctl reload nginx
+#   5. In GitHub repo Settings > Webhooks > Add webhook:
+#        Payload URL: https://deploy.cahayastore.me/webhook
+#        Content type: application/json
+#        Secret: (the GITHUB_WEBHOOK_SECRET from deploy-hook/.env)
+#        Events: Just the push event
+#   6. Test: GitHub "Redeliver" the ping, then check
+#        curl https://deploy.cahayastore.me/status   (last 50 deploy log lines)
+#
+# NOTE: /status is public in server.js and leaks deploy log tail. Consider
+# restricting it (allow/deny by IP, or basic auth) before enabling — see the
+# commented location block below.
+
+server {
+    listen 80;
+    server_name deploy.cahayastore.me;
+    # certbot will add the 443 server block + redirect on first run.
+
+    # Small webhook payloads only.
+    client_max_body_size 1m;
+
+    location /webhook {
+        proxy_pass http://127.0.0.1:9000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # GitHub sends signature; we don't buffer to keep raw body intact.
+        proxy_request_buffering off;
+    }
+
+    # OPTIONAL: lock down /status so the deploy log isn't world-readable.
+    # location /status {
+    #     allow 127.0.0.1;
+    #     # allow <your office/home IP>;
+    #     deny all;
+    #     proxy_pass http://127.0.0.1:9000;
+    # }
+
+    location / {
+        return 404;
+    }
+}
