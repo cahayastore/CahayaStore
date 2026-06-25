@@ -181,18 +181,21 @@ Verified this session; the previous pending list was stale. Status:
 - Fixed a latent 500 in legacy `POST /api/checkout`: a missing `product_id`
   became the string `"undefined"` and threw `invalid input syntax for type
   uuid`. Added a UUID-shape guard that returns a clean 400.
+- Repo hygiene: now TRACK `deploy-hook/package-lock.json` (deploy.sh runs
+  `npm ci`, which needs a committed lockfile — matches `backend/`); and
+  GITIGNORE the root `/index.html` (it's an identical deploy-time copy of
+  `storefront/index.html`). Working tree is clean.
 
 ## Pending / recommended next work
 1. Register a GitHub deploy webhook for `cahayastore-deploy-hook` (process is
    online on :9000 but no nginx `deploy.` site is enabled; decide whether to
-   expose it or trigger deploys another way).
+   expose it or trigger deploys another way). NEEDS A DECISION — exposing a
+   network service, so left for explicit direction.
 2. Consider RETIRING the legacy `/api/webhooks/myqris` and `/api/checkout`
    endpoints once confirmed unused, to remove duplicate payment logic (now
-   behaviour-equivalent but still two code paths to maintain).
-3. Root `index.html` and `deploy-hook/package-lock.json` show as untracked on
-   the server — decide whether to gitignore (root index.html is a deploy
-   artifact copy of storefront/index.html) or track them.
-4. Keep syncing server→laptop. Laptop typically has no clone; use the
+   behaviour-equivalent but still two code paths to maintain). NEEDS
+   CONFIRMATION they're truly unused before removal.
+3. Keep syncing server→laptop. Laptop typically has no clone; use the
    scp-to-server + commit-on-server flow above.
 
 ## How to resume in a new session (do this)
