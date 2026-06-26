@@ -21,7 +21,11 @@ export const session = {
 };
 
 export async function api(path, opts = {}) {
-  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  // For FormData (file uploads) we must NOT set Content-Type — the browser sets
+  // 'multipart/form-data; boundary=...' itself. Forcing application/json makes
+  // the server try to JSON-parse the binary body (entity.parse.failed → 500).
+  const isForm = (typeof FormData !== 'undefined') && (opts.body instanceof FormData);
+  const headers = { ...(isForm ? {} : { 'Content-Type': 'application/json' }), ...(opts.headers || {}) };
   const tok = session.getToken();
   if (tok) headers.Authorization = `Bearer ${tok}`;
   const res = await fetch(API_BASE + path, { ...opts, headers });
