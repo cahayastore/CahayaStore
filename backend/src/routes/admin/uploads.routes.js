@@ -25,6 +25,9 @@ const PRESETS = {
   category: { width: 400,  height: 400,  fit: 'cover' },
   banner:   { width: 1600, height: 600,  fit: 'cover' },
   default:  { width: 1200, height: 1200, fit: 'inside' },
+  // Barcode/voucher images must stay crisp & scannable: lossless PNG, no
+  // shrinking below original, flattened on white so transparent edges scan.
+  barcode:  { width: 1600, height: 1600, fit: 'inside', lossless: true },
 };
 
 // Keep raw bytes in memory; sharp compresses to disk as WebP.
@@ -50,19 +53,28 @@ router.post('/uploads', requireAuth(['owner', 'admin']), (req, res) => {
     try {
       const presetKey = String(req.query.preset || '').toLowerCase();
       const preset = PRESETS[presetKey] || PRESETS.default;
-      const filename = crypto.randomBytes(16).toString('hex') + '.webp';
+
+      // Lossless presets (barcode) output PNG to preserve sharp bars; everything
+      // else outputs compressed WebP.
+      const ext = preset.lossless ? '.png' : '.webp';
+      const filename = crypto.randomBytes(16).toString('hex') + ext;
       const outPath = path.join(UPLOADS_DIR, filename);
 
-      await sharp(req.file.buffer, { animated: true })
+      let pipeline = sharp(req.file.buffer, { animated: !preset.lossless })
         .rotate() // respect EXIF orientation
         .resize({
           width: preset.width,
           height: preset.height,
           fit: preset.fit,
           withoutEnlargement: true,
-        })
-        .webp({ quality: 80, effort: 4 })
-        .toFile(outPath);
+        });
+      if (preset.lossless) {
+        // Flatten transparency onto white so scanners see clean black-on-white.
+        pipeline = pipeline.flatten({ background: '#ffffff' }).png({ compressionLevel: 9 });
+      } else {
+        pipeline = pipeline.webp({ quality: 80, effort: 4 });
+      }
+      await pipeline.toFile(outPath);
 
       const { size } = fs.statSync(outPath);
       const url = `${PUBLIC_BASE}/${filename}`;

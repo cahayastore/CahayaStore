@@ -148,24 +148,52 @@ function buildAddForm(product, onAdded) {
     onchange: async (e) => {
       const files = Array.from(e.target.files || []);
       if (!files.length) return;
-      for (const f of files) {
+      fileInput.disabled = true;
+      const total = files.length;
+      let done = 0, failed = 0;
+      uploadStatus.textContent = `Mengunggah 0/${total}…`;
+
+      // Upload one image to the barcode (lossless) preset.
+      const uploadOne = async (f) => {
         try {
           const fd = new FormData();
           fd.append('file', f);
-          const r = await api('/api/admin/uploads?preset=default', { method: 'POST', body: fd });
+          const r = await api('/api/admin/uploads?preset=barcode', { method: 'POST', body: fd });
           if (r && r.url) uploadedImages.push(r.url);
+          else failed++;
         } catch (err) {
-          toast(err.message || 'Gagal unggah gambar.', 'err');
+          failed++;
+        } finally {
+          done++;
+          uploadStatus.textContent = `Mengunggah ${done}/${total}…`;
+          renderImgPreview();
+          updateCounter();
         }
-      }
+      };
+
+      // Bounded parallelism (5 at a time) — fast for bulk without flooding.
+      const CONCURRENCY = 5;
+      const queue = files.slice();
+      const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+        while (queue.length) { await uploadOne(queue.shift()); }
+      });
+      await Promise.all(workers);
+
+      uploadStatus.textContent = failed
+        ? `Selesai: ${total - failed} berhasil, ${failed} gagal.`
+        : `Selesai: ${total} gambar terunggah.`;
+      if (failed) toast(`${failed} gambar gagal diunggah.`, 'err');
       e.target.value = '';
+      fileInput.disabled = false;
       renderImgPreview();
       updateCounter();
     },
   });
+  const uploadStatus = el('div', { class: 'muted', style: 'font-size:var(--fs-xs);margin-bottom:6px' }, '');
   const imageWrap = el('div', { style: 'display:none' },
     el('label', { class: 'muted', style: 'display:block;font-size:var(--fs-xs);margin-bottom:4px' }, 'Unggah gambar barcode (boleh banyak — tiap gambar jadi 1 stok)'),
     fileInput,
+    uploadStatus,
     imgPreview
   );
 
