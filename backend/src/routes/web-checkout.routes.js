@@ -12,6 +12,48 @@ const { query, tx } = require('../db');
 const { createInvoice, getUniqueMax, verifyPayhookToken } = require('../payment/myqris.service');
 const { decryptString } = require('../crypto');
 const { issueGatewaySession, issueWebSession, resolveCustomer } = require('../customer-auth');
+
+/* Retry a DB operation a few times on transient concurrency errors
+   (serialization failure, deadlock, lock-not-available). Uses small
+   exponential backoff with jitter. Non-transient errors rethrow immediately. */
+const TRANSIENT_PG = new Set(['40001', '40P01', '55P03']);
+async function withRetry(fn, { tries = 5, baseMs = 40, label = 'op' } = {}) {
+  let lastErr;
+  for (let attempt = 1; attempt <= tries; attempt += 1) {
+    try {
+      return await fn(attempt);
+    } catch (e) {
+      lastErr = e;
+      const transient = e && (TRANSIENT_PG.has(e.code) || /deadlock|could not serialize|lock/i.test(e.message || ''));
+      if (!transient || attempt === tries) throw e;
+      const delay = baseMs * 2 ** (attempt - 1) + Math.floor(Math.random() * baseMs);
+      console.warn(`[retry ${label}] attempt ${attempt} failed (${e.code || e.message}); retrying in ${delay}ms`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
+/* Pick a unique payment amount atomically inside an open tx `client`.
+   A Postgres transaction-level advisory lock keyed by the base total
+   serializes ONLY concurrent checkouts of the same price, so two orders can
+   never read the same "free" amount and collide. Returns total+offset. */
+async function pickUniqueAmount(client, total, max) {
+  // Lock scope = base total; released automatically at COMMIT/ROLLBACK.
+  await client.query('SELECT pg_advisory_xact_lock($1)', [Number(total)]);
+  const taken = await client.query(
+    `SELECT p.amount FROM payments p
+        JOIN orders o ON o.id = p.order_id
+       WHERE p.status = 'pending' AND p.amount BETWEEN $1 AND $2`,
+    [total, total + max]
+  );
+  const used = new Set(taken.rows.map((r) => Number(r.amount)));
+  for (let add = 0; add <= max; add += 1) {
+    if (!used.has(total + add)) return total + add;
+  }
+  // All offsets taken (rare): fall back to base; webhook still matches by ref.
+  return total;
+}
 const { getSetting, KEYS } = require('../settings.service');
 
 const router = express.Router();
@@ -276,20 +318,9 @@ router.post('/public/web-checkout', async (req, res) => {
   const accessToken = genToken();
 
   // Unique amount so PayHook can disambiguate concurrent orders by exact rupiah.
-  let uniqueAmount = total;
-  try {
-    const max = await getUniqueMax();
-    const taken = await query(
-      `SELECT p.amount FROM payments p
-         JOIN orders o ON o.id = p.order_id
-        WHERE p.status = 'pending' AND p.amount BETWEEN $1 AND $2`,
-      [total, total + max]
-    );
-    const used = new Set(taken.rows.map((r) => Number(r.amount)));
-    for (let add = 0; add <= max; add += 1) {
-      if (!used.has(total + add)) { uniqueAmount = total + add; break; }
-    }
-  } catch { uniqueAmount = total; }
+  // The actual pick happens ATOMICALLY inside the order transaction below (under
+  // a per-total advisory lock) so simultaneous same-price checkouts can't collide.
+  const uniqueMax = await getUniqueMax().catch(() => 50);
 
   // ── Resolve the authoritative Telegram identity FIRST (mini app) ──
   // A valid initData represents the user CURRENTLY using the mini app and must
@@ -354,7 +385,9 @@ router.post('/public/web-checkout', async (req, res) => {
   const expireMinutes = await getExpireMinutes();
 
   try {
-    const result = await tx(async (client) => {
+    const result = await withRetry((attempt) => tx(async (client) => {
+      // Atomically choose a collision-free amount under a per-total advisory lock.
+      const uniqueAmount = await pickUniqueAmount(client, total, uniqueMax);
       const o = await client.query(
         `INSERT INTO orders (order_no, user_id, buyer_email, customer_whatsapp, total_amount, status, payment_status, access_token, expires_at, channel, customer_note)
          VALUES ($1,$2,$3,$4,$5,'pending_payment','pending',$6, now() + ($7 || ' minutes')::interval, $8, $9) RETURNING *`,
@@ -393,9 +426,10 @@ router.post('/public/web-checkout', async (req, res) => {
          VALUES ($1,$2,$3,$4,$5,'pending',$6)`,
         [order.id, invoice.provider, invoice.payment_ref, invoice.qr_payload, uniqueAmount, invoice.raw]
       );
-      return { order, invoice };
-    });
+      return { order, invoice, uniqueAmount };
+    }), { label: 'web-checkout' });
 
+    const uniqueAmount = result.uniqueAmount;
     res.status(201).json({
       success: true,
       data: {
@@ -672,7 +706,7 @@ async function payhookHandler(req, res) {
   }
 
   try {
-    const result = await tx(async (client) => {
+    const result = await withRetry((attempt) => tx(async (client) => {
       let o;
       if (explicitRef && /^CS-/i.test(String(explicitRef))) {
         o = await client.query("SELECT * FROM orders WHERE order_no = $1 FOR UPDATE", [explicitRef]);
@@ -714,7 +748,7 @@ async function payhookHandler(req, res) {
         userId: order.user_id,
         paid: { orderNo: order.order_no, amount: order.total_amount, email: order.buyer_email, products: prod.rows[0]?.names || '', channel: order.channel },
       };
-    });
+    }), { label: 'payhook' });
 
     if (result.reason === 'ambiguous') return res.json({ status: 'ambiguous', matching_count: result.count });
     if (!result.matched) return res.json({ status: 'no_match', reason: result.reason || 'no_match' });
